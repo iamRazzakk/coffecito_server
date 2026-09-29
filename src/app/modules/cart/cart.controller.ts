@@ -27,7 +27,8 @@ const getAllCartItems = catchAsync(
       statusCode: StatusCodes.OK,
       success: true,
       message: "Cart items fetched successfully",
-      data: cartItems,
+      pagination: cartItems.meta,
+      data: cartItems.data,
     });
   },
 );
