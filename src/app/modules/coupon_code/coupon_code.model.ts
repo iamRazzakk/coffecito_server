@@ -6,6 +6,19 @@ const couponCodeSchema = new Schema<ICouponCode, CouponCodeModel>({
     type: Number,
     required: true,
   },
+  discountType: {
+    type: String,
+    enum: ["percentage", "fixed"],
+    required: true,
+  },
+  minOrderAmount: {
+    type: Number,
+    required: false,
+  },
+  minDiscountAmount: {
+    type: Number,
+    required: false,
+  },
   code: {
     type: Number,
     required: true,

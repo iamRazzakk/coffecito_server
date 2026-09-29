@@ -1,9 +1,12 @@
 import { Model } from "mongoose";
 
 export type ICouponCode = {
-  percentage: number;
   code: number;
-  expireDate: Date;
+  discountType: "percentage" | "fixed";
+  percentage: number;
+  minOrderAmount?: number;
+  minDiscountAmount?: number;
+  expireDate?: Date;
   isActive: boolean;
 };
 
