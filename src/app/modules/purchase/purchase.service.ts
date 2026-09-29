@@ -9,6 +9,7 @@ import { Types } from "mongoose";
 import stripe from "../../../config/stripe";
 import config from "../../../config";
 import { IUser } from "../user/user.interface";
+import QueryBuilder from "../../builder/queryBuilder";
 
 const createPurchaseDataIntoDB = async (
   payload: Pick<IPurchase, "cartId" | "couponCodeId">,
@@ -72,4 +73,41 @@ const createPurchaseDataIntoDB = async (
   return { url: session.url, purchaseId: purchase._id };
 };
 
-export const PurchaseServices = { createPurchaseDataIntoDB };
+const getMyPurchasesHistoryFromDB = async (
+  user: JwtPayload,
+  query: Record<string, any>,
+) => {
+  const purchases = new QueryBuilder(
+    Purchase.find({ userId: new Types.ObjectId(user.id) }),
+    query,
+  )
+    .filter()
+    .sort()
+    .paginate();
+  const [meta, data] = await Promise.all([
+    purchases.getPaginationInfo(),
+    purchases.modelQuery.exec(),
+  ]);
+  return { meta, data };
+};
+
+const getAllPurchaseHistoryFromDB = async (query: Record<string, any>) => {
+  const purchases = new QueryBuilder(Purchase.find(), query)
+    .filter()
+    .sort()
+    .populate(["userId"], {
+      userId: "name phone",
+    })
+    .paginate();
+  const [meta, data] = await Promise.all([
+    purchases.getPaginationInfo(),
+    purchases.modelQuery.exec(),
+  ]);
+  return { meta, data };
+};
+
+export const PurchaseServices = {
+  createPurchaseDataIntoDB,
+  getMyPurchasesHistoryFromDB,
+  getAllPurchaseHistoryFromDB,
+};

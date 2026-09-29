@@ -19,4 +19,39 @@ const createPurchase = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const PurchaseController = { createPurchase };
+const getMyPurchasesHistory = catchAsync(
+  async (req: Request, res: Response) => {
+    const query = req.query;
+    const result = await PurchaseServices.getMyPurchasesHistoryFromDB(
+      req.user,
+      query,
+    );
+    sendResponse(res, {
+      success: true,
+      message: "Purchase history fetched successfully",
+      statusCode: StatusCodes.OK,
+      pagination: result.meta,
+      data: result.data,
+    });
+  },
+);
+
+const getAllPurchaseHistory = catchAsync(
+  async (req: Request, res: Response) => {
+    const query = req.query;
+    const result = await PurchaseServices.getAllPurchaseHistoryFromDB(query);
+    sendResponse(res, {
+      success: true,
+      message: "Purchase history fetched successfully",
+      statusCode: StatusCodes.OK,
+      pagination: result.meta,
+      data: result.data,
+    });
+  },
+);
+
+export const PurchaseController = {
+  createPurchase,
+  getMyPurchasesHistory,
+  getAllPurchaseHistory,
+};
