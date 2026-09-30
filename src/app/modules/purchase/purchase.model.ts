@@ -32,7 +32,7 @@ const purchaseSchema = new Schema<IPurchase, PurchaseModel>(
     timestamps: true,
   },
 );
-
+purchaseSchema.index({ status: 1, cartId: 1 });
 export const Purchase = model<IPurchase, PurchaseModel>(
   "Purchase",
   purchaseSchema,
