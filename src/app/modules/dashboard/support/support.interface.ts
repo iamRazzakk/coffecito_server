@@ -1,6 +1,6 @@
 import { Model, Types } from "mongoose";
 
-export const SUPPORT_TICKET_STATUS = ["Pending", "Resolved"] as const;
+export const SUPPORT_TICKET_STATUS = ["Pending", "Resolved", "Closed"] as const;
 
 export type SupportTicketStatus = (typeof SUPPORT_TICKET_STATUS)[number];
 

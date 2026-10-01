@@ -7,7 +7,7 @@ const faqSchema = new mongoose.Schema(
     question: { type: String, required: true, trim: true },
     answer: { type: String, required: true, trim: true },
   },
-  { _id: true },
+  { _id: false },
 );
 
 const hoursSchema = new mongoose.Schema(
@@ -20,7 +20,7 @@ const hoursSchema = new mongoose.Schema(
     open: { type: String, required: true },
     close: { type: String, required: true },
   },
-  { _id: true },
+  { _id: false },
 );
 
 const shopSchema = new mongoose.Schema(

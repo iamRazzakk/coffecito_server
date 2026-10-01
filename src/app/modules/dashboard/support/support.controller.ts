@@ -44,7 +44,7 @@ const updateSupportTicketStatus = catchAsync(
   async (req: Request, res: Response) => {
     const result = await SupportServices.updateSupportTicketStatusToDB(
       req.params.id,
-      req.body.status,
+      req.body,
     );
     sendResponse(res, {
       success: true,
