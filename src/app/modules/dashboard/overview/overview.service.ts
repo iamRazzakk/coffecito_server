@@ -1,23 +1,30 @@
-import { USER_ROLES } from "../../../enums/user";
-import { Product } from "../../modules/product/product.model";
-import { Purchase } from "../../modules/purchase/purchase.model";
-import { User } from "../../modules/user/user.model";
+import { USER_ROLES } from "../../../../enums/user";
+import { Purchase } from "../../purchase/purchase.model";
+import { User } from "../../user/user.model";
+
 
 const getOverViewDataFromDB = async () => {
-  const [totalActiveUser, totalOrder, totalRevenue] = await Promise.all([
+  const [totalActiveUser, totalOrder, revenueRows] = await Promise.all([
     User.countDocuments({
       role: USER_ROLES.USER,
       isActive: true,
     }),
     Purchase.countDocuments(),
     Purchase.aggregate([
-      { $match: { $in: ["confirmed", "delivered"] } },
+      { $match: { status: { $in: ["confirmed", "delivered"] } } },
       { $group: { _id: null, totalRevenue: { $sum: "$amount" } } },
     ]),
   ]);
   const totalAcitveShop = 0; // TODO: get total active shop
-  return { totalActiveUser, totalOrder, totalRevenue, totalAcitveShop };
+  return {
+    totalActiveUser,
+    totalOrder,
+    totalRevenue: revenueRows[0]?.totalRevenue ?? 0,
+    totalAcitveShop,
+  };
 };
+
+
 
 const getRevenueOverViewBaseTheMonth = async () => {
   const monthNames = [
@@ -63,7 +70,7 @@ const getRevenueOverViewBaseTheMonth = async () => {
 
   return monthNames.map((month, index) => {
     const key = String(index + 1).padStart(2, "0");
-    const found = rows.find((row) => row._id === key);
+    const found = rows.find((row: any) => row._id === key);
     return { month, totalRevenue: found?.totalRevenue ?? 0 };
   });
 };
@@ -76,7 +83,7 @@ const getPurchaseOverviewFromDB = async () => {
     totalOrder,
   ] = await Promise.all([
     Purchase.countDocuments({ status: "pending" }),
-    Purchase.countDocuments({ $in: ["confirmed", "delivered"] }),
+    Purchase.countDocuments({ status: { $in: ["confirmed", "delivered"] } }),
     Purchase.countDocuments({ status: "cancelled" }),
     Purchase.countDocuments(),
   ]);

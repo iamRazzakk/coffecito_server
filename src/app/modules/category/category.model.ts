@@ -6,6 +6,10 @@ const categorySchema = new Schema<ICategory, CategoryModel>({
     type: String,
     required: true,
   },
+  image: {
+    type: String,
+    required: true,
+  },
   isActive: {
     type: Boolean,
     default: true,

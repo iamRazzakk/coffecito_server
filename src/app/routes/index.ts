@@ -7,6 +7,10 @@ import { CartRoutes } from "../modules/cart/cart.routes";
 import { CouponCodeRoutes } from "../modules/coupon_code/coupon_code.routes";
 import { RuleRoutes } from "../modules/rule/rule.route";
 import { PurchaseRoutes } from "../modules/purchase/purchase.routes";
+import { OverviewRoutes } from "../modules/dashboard/overview/overview.routes";
+import { OrderRoutes } from "../modules/dashboard/order/order.routes";
+import { UserListRoutes } from "../modules/dashboard/UserList/userList.routes";
+import { ShopRoutes } from "../modules/shop/shop.routes";
 const router = express.Router();
 
 const apiRoutes = [
@@ -18,6 +22,10 @@ const apiRoutes = [
   { path: "/coupon-code", route: CouponCodeRoutes },
   { path: "/rule", route: RuleRoutes },
   { path: "/purchase", route: PurchaseRoutes },
+  { path: "/dashboard", route: OverviewRoutes },
+  { path: "/dashboard", route: OrderRoutes },
+  { path: "/dashboard/user-list", route: UserListRoutes },
+  { path: "/shop", route: ShopRoutes },
 ];
 
 apiRoutes.forEach((route) => router.use(route.path, route.route));

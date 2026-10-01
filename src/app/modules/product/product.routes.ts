@@ -63,8 +63,26 @@ router
     ProductController.getProductById,
   )
   .patch(
-    validateRequest(ProductValidations.updateProductZodSchema),
     auth(USER_ROLES.SUPER_ADMIN),
+    getUploadFields(),
+    async (req: Request, _res: Response, next: NextFunction) => {
+      try {
+        const data = req.body;
+        data.originalPrice = Number(data.originalPrice);
+        data.discountPrice = Number(data.discountPrice);
+        const image = getSingleFilePath(
+          req.files as Record<string, Express.Multer.File[]>,
+          "image",
+        );
+        data.image = image;
+        req.body = data;
+
+        next();
+      } catch (error) {
+        next(error);
+      }
+    },
+    validateRequest(ProductValidations.updateProductZodSchema),
     ProductController.updateProductById,
   )
   .delete(auth(USER_ROLES.SUPER_ADMIN), ProductController.deleteProductById);
