@@ -46,11 +46,6 @@ const createPurchaseDataIntoDB = async (
     status: "pending",
   });
 
-  const totalAmount = cartItems.reduce(
-    (sum, item) => sum + item.lockedUnitPrice * item.quantity,
-    0,
-  );
-
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     success_url: config.stripe.paymentSuccessUrl,
@@ -65,6 +60,7 @@ const createPurchaseDataIntoDB = async (
     })),
     metadata: {
       purchaseId: purchase._id.toString(),
+      userId: user.id,
     },
   });
   if (!session.url) {

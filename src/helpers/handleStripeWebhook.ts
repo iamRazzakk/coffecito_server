@@ -1,18 +1,17 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import colors from "colors";
-import {
-  handleAccountUpdatedEvent,
-  handleSubscriptionCreated,
-  handleSubscriptionDeleted,
-  handleSubscriptionUpdated,
-} from "../handlers";
+import { Types } from "mongoose";
+
 import { StatusCodes } from "http-status-codes";
 import { logger } from "../shared/logger";
 import config from "../config";
 import ApiError from "../errors/ApiErrors";
 import stripe from "../config/stripe";
 import { Purchase } from "../app/modules/purchase/purchase.model";
+import { sendNotifications } from "./notificationsHelper";
+import { USER_ROLES } from "../enums/user";
+import { User } from "../app/modules/user/user.model";
 
 const handleStripeWebhook = async (req: Request, res: Response) => {
   // Extract Stripe signature and webhook secret
@@ -54,6 +53,15 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
           { _id: purchaseId, status: "pending" },
           { status: "confirmed" },
         );
+        // need to send notification
+        const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN });
+        await sendNotifications({
+          title: `Purchase Confirmed`,
+          message: "Your purchase has been confirmed",
+          receiver: new Types.ObjectId(admin?._id),
+          sender: new Types.ObjectId(session.metadata?.userId),
+          isRead: false,
+        });
         break;
       }
 
