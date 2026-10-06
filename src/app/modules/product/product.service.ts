@@ -3,8 +3,11 @@ import QueryBuilder from "../../builder/queryBuilder";
 import { IProduct } from "./product.interface";
 import { Product } from "./product.model";
 import ApiError from "../../../errors/ApiErrors";
+import { JwtPayload } from "jsonwebtoken";
+import { Types } from "mongoose";
 
-const createProductToDB = async (payload: IProduct) => {
+const createProductToDB = async (payload: IProduct, user: JwtPayload) => {
+  payload.shopId = new Types.ObjectId(user.id);
   const product = await Product.create(payload);
   return product;
 };

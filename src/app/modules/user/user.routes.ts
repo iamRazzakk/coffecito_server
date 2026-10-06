@@ -37,8 +37,7 @@ router
           data.image = profilePath;
         }
         // need to parse the body
-        const parsedBody = JSON.parse(data);
-        req.body = parsedBody;
+        req.body = data;
         next();
       } catch (error) {
         next(error);

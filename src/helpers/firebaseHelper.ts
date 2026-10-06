@@ -42,6 +42,5 @@
 //   //firebase
 //   firebaseHelper.sendPushNotifications(message); */
 
-
 // // for setup the firebase notification an attribute set on the user model which name will be deviceToken
 // // and when login it will be save on the database. then when you need to send the push notification call above function

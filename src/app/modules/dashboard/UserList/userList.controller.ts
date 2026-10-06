@@ -35,4 +35,19 @@ const suspendUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-export const UserListController = { getAllUsers, getUserById, suspendUser };
+const restoreUser = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserListService.restoreUserByIdFromDB(req.params.id);
+  sendResponse(res, {
+    success: true,
+    message: "User access restored successfully",
+    statusCode: StatusCodes.OK,
+    data: result,
+  });
+});
+
+export const UserListController = {
+  getAllUsers,
+  getUserById,
+  suspendUser,
+  restoreUser,
+};

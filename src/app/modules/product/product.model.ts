@@ -33,6 +33,11 @@ const productSchema = new Schema<IProduct, ProductModel>(
       type: String,
       required: true,
     },
+    shopId: {
+      type: Schema.Types.ObjectId,
+      ref: "Shop",
+      required: true,
+    },
     status: {
       type: Boolean,
       default: true,

@@ -38,8 +38,21 @@ const suspendUserByIdFromDB = async (id: string) => {
   return user;
 };
 
+const restoreUserByIdFromDB = async (id: string) => {
+  const user = await User.findOneAndUpdate(
+    { _id: id, role: USER_ROLES.USER },
+    { isBanned: false },
+    { new: true },
+  );
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+  }
+  return user;
+};
+
 export const UserListService = {
   getAllUsersFromDB,
   getUserByIdFromDB,
   suspendUserByIdFromDB,
+  restoreUserByIdFromDB,
 };

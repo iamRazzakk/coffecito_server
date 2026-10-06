@@ -9,6 +9,7 @@ export type IProduct = {
   originalPrice: number;
   image: string;
   status: boolean;
+  shopId: Types.ObjectId;
 };
 
 export type ProductModel = Model<IProduct>;

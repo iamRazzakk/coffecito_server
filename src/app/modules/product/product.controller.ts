@@ -5,7 +5,7 @@ import sendResponse from "../../../shared/sendResponse";
 import { ProductServices } from "./product.service";
 
 const createProduct = catchAsync(async (req: Request, res: Response) => {
-  const product = await ProductServices.createProductToDB(req.body);
+  const product = await ProductServices.createProductToDB(req.body, req.user);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
@@ -25,17 +25,21 @@ const getAllProducts = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
-const getAllProductsFilterByStatus = catchAsync(async (req: Request, res: Response) => {
-  const products = await ProductServices.getAllProductsFilterByStatusFromDB(req.query, req.params.id);
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: "Products fetched successfully",
-    pagination: products.meta,
-    data: products.data,
-  });
-});
+const getAllProductsFilterByStatus = catchAsync(
+  async (req: Request, res: Response) => {
+    const products = await ProductServices.getAllProductsFilterByStatusFromDB(
+      req.query,
+      req.params.id,
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: "Products fetched successfully",
+      pagination: products.meta,
+      data: products.data,
+    });
+  },
+);
 
 const getProductById = catchAsync(async (req: Request, res: Response) => {
   const product = await ProductServices.getProductByIdFromDB(req.params.id);

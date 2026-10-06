@@ -20,5 +20,10 @@ router.patch(
   auth(USER_ROLES.SUPER_ADMIN),
   UserListController.suspendUser,
 );
+router.patch(
+  "/:id/restore",
+  auth(USER_ROLES.SUPER_ADMIN),
+  UserListController.restoreUser,
+);
 
 export const UserListRoutes = router;
