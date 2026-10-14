@@ -1,5 +1,15 @@
-import { Model, Types } from "mongoose";
+import { Model } from "mongoose";
 import { USER_ROLES } from "../../../enums/user";
+
+export type IContactInfo = {
+  whatsapp?: string;
+  instagram?: string;
+  facebook?: string;
+  location?: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+};
 
 // Main User interface
 export type IUser = {
@@ -11,6 +21,7 @@ export type IUser = {
   isActive: boolean;
   isBanned: boolean;
   role: USER_ROLES;
+  contactInfo?: IContactInfo;
 };
 
 export type UserModal = {

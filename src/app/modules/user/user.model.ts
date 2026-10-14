@@ -47,6 +47,22 @@ const userSchema = new Schema<IUser, UserModal>(
       required: false,
       default: null,
     },
+    contactInfo: {
+      location: {
+        type: {
+          type: String,
+          enum: ["Point"],
+          required: true,
+        },
+        coordinates: {
+          type: [Number],
+          required: true,
+        },
+      },
+      whatsapp: { type: String, required: false },
+      instagram: { type: String, required: false },
+      facebook: { type: String, required: false },
+    },
   },
   {
     timestamps: true,
@@ -59,6 +75,8 @@ const userSchema = new Schema<IUser, UserModal>(
 userSchema.index({ phone: 1 });
 // if filtering by role often
 userSchema.index({ role: 1 });
+// location index
+userSchema.index({ "contactInfo.location.coordinates": "2dsphere" });
 //exist user check
 userSchema.statics.isExistUserById = async (id: string) => {
   const isExist = await User.findById(id);

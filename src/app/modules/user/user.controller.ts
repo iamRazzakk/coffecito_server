@@ -49,8 +49,21 @@ const updateProfile = catchAsync(
   },
 );
 
+// get all branches
+const getAllBranches = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getAllBranchesFromDB(req.query);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Branches retrieved successfully",
+    pagination: result.meta,
+    data: result.data,
+  });
+});
+
 export const UserController = {
   createUser,
   getUserProfile,
   updateProfile,
+  getAllBranches,
 };
