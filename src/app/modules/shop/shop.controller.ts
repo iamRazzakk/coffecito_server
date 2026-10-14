@@ -55,10 +55,27 @@ const deleteShopById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllShopProductBasedOnCategoryId = catchAsync(
+  async (req: Request, res: Response) => {
+    const products =
+      await ShopServices.getAllShopProductBasedOnCategoryIdFromDB(
+        req.params.id,
+        req.params.shopId,
+      );
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: "Products fetched successfully",
+      pagination: products.meta,
+      data: products.data,
+    });
+  },
+);
 export const ShopController = {
   createShop,
   getAllShops,
   getShopById,
   updateShopById,
   deleteShopById,
+  getAllShopProductBasedOnCategoryId,
 };

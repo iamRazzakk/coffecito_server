@@ -14,7 +14,6 @@ const hoursZodSchema = z.object({
 
 const shopZodSchema = z.object({
   name: z.string({ required_error: "Name is required" }).trim().min(1),
-  location: z.string({ required_error: "Location is required" }).trim().min(1),
   phone: z.string().trim().optional(),
   about: z.string().optional(),
   image: z.string().optional(),

@@ -45,10 +45,4 @@ router
     },
     UserController.updateProfile,
   );
-
-router.get(
-  "/branches",
-  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.SHOP_OWNER, USER_ROLES.USER),
-  UserController.getAllBranches,
-);
 export const UserRoutes = router;

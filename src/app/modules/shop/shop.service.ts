@@ -7,6 +7,7 @@ import { User } from "../user/user.model";
 import { IUser } from "../user/user.interface";
 import { USER_ROLES } from "../../../enums/user";
 import mongoose from "mongoose";
+import { Product } from "../product/product.model";
 // create shop in to db
 const createShopToDB = async (payload: IShop) => {
   const isExist = await User.findOne({ phone: payload.phone });
@@ -27,6 +28,7 @@ const createShopToDB = async (payload: IShop) => {
           isVerified: true,
           role: USER_ROLES.SHOP_OWNER,
           image: payload.image,
+          contactInfo: payload.contactInfo,
         },
       ],
       { session },
@@ -44,7 +46,7 @@ const createShopToDB = async (payload: IShop) => {
 
 const getAllShopsFromDB = async (query: Record<string, any>) => {
   const shops = new QueryBuilder(Shop.find(), query)
-    .search(["name", "location"])
+    .search(["name", "contactInfo.location.coordinates"])
     .filter()
     .sort()
     .paginate();
@@ -88,10 +90,29 @@ const deleteShopByIdFromDB = async (id: string) => {
   return shop;
 };
 
+const getAllShopProductBasedOnCategoryIdFromDB = async (
+  id: string,
+  shopId: string,
+) => {
+  const qb = new QueryBuilder(Product.find(), {
+    categoryId: id,
+    shopId: shopId,
+    status: true,
+  })
+    .sort()
+    .paginate();
+  const [data, meta] = await Promise.all([
+    qb.modelQuery.exec(),
+    qb.getPaginationInfo(),
+  ]);
+  return { data, meta };
+};
+
 export const ShopServices = {
   createShopToDB,
   getAllShopsFromDB,
   getShopByIdFromDB,
   updateShopByIdToDB,
   deleteShopByIdFromDB,
+  getAllShopProductBasedOnCategoryIdFromDB,
 };

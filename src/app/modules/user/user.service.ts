@@ -51,23 +51,9 @@ const updateProfileToDB = async (
   return updateDoc;
 };
 
-const getAllBranchesFromDB = async (query: Record<string, any>) => {
-  const result = new QueryBuilder(
-    User.find({ role: USER_ROLES.SHOP_OWNER }).lean(),
-    query,
-  )
-    .paginate()
-    .sort();
-  const [data, meta] = await Promise.all([
-    result.modelQuery.exec(),
-    result.getPaginationInfo(),
-  ]);
-  return { data, meta };
-};
 
 export const UserService = {
   createUserToDB,
   getUserProfileFromDB,
   updateProfileToDB,
-  getAllBranchesFromDB,
 };

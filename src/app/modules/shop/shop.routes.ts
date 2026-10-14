@@ -73,4 +73,11 @@ router
   )
   .delete(auth(USER_ROLES.SUPER_ADMIN), ShopController.deleteShopById);
 
+router
+  .route("/:id/products")
+  .get(
+    auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER, USER_ROLES.SHOP_OWNER),
+    ShopController.getAllShopProductBasedOnCategoryId,
+  );
+
 export const ShopRoutes = router;

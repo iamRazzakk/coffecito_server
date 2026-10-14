@@ -26,7 +26,6 @@ const hoursSchema = new mongoose.Schema(
 const shopSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    location: { type: String, required: true, trim: true },
     phone: { type: String, default: "" },
     about: { type: String, default: "" },
     image: { type: String, default: "" },
@@ -37,6 +36,22 @@ const shopSchema = new mongoose.Schema(
     },
     faqs: { type: [faqSchema], default: [] },
     hours: { type: [hoursSchema], default: [] },
+    contactInfo:{
+      location:{
+        type: {
+          type: String,
+          enum: ["Point"],
+          required: true,
+        },
+        coordinates: {
+          type: [Number],
+          required: true,
+        },
+      },
+      whatsapp: { type: String, required: false },
+      instagram: { type: String, required: false },
+      facebook: { type: String, required: false },
+    },
   },
   { timestamps: true },
 );
