@@ -30,7 +30,19 @@ const updateShopZodSchema = z.object({
   body: shopZodSchema.partial(),
 });
 
+const objectIdSchema = z
+  .string({ required_error: "Id is required" })
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid id");
+
+const shopCategoryProductsZodSchema = z.object({
+  params: z.object({
+    id: objectIdSchema,
+    categoryId: objectIdSchema,
+  }),
+});
+
 export const ShopValidations = {
   createShopZodSchema,
   updateShopZodSchema,
+  shopCategoryProductsZodSchema,
 };

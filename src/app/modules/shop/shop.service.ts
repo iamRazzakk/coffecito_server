@@ -91,14 +91,17 @@ const deleteShopByIdFromDB = async (id: string) => {
 };
 
 const getAllShopProductBasedOnCategoryIdFromDB = async (
-  id: string,
   shopId: string,
+  categoryId: string,
+  query: Record<string, any>,
 ) => {
   const qb = new QueryBuilder(Product.find(), {
-    categoryId: id,
-    shopId: shopId,
+    ...query,
+    shopId,
+    categoryId,
     status: true,
   })
+    .filter()
     .sort()
     .paginate();
   const [data, meta] = await Promise.all([
