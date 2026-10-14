@@ -60,7 +60,8 @@ const getAllShopProductBasedOnCategoryId = catchAsync(
     const products =
       await ShopServices.getAllShopProductBasedOnCategoryIdFromDB(
         req.params.id,
-        req.params.shopId,
+        req.params.categoryId,
+        req.query,
       );
     sendResponse(res, {
       success: true,
