@@ -141,7 +141,14 @@ const getTopProducts = async () => {
         _id: "$cart.productId",
         unitsSold: { $sum: "$cart.quantity" },
         revenue: {
-          $sum: { $multiply: ["$cart.lockedUnitPrice", "$cart.quantity"] },
+          $sum: {
+            $multiply: [
+              {
+                $ifNull: ["$cart.unitPrice", "$cart.lockedUnitPrice"],
+              },
+              "$cart.quantity",
+            ],
+          },
         },
       },
     },

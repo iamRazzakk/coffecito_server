@@ -1,14 +1,14 @@
 import { JwtPayload } from "jsonwebtoken";
 import { Cart } from "../cart/cart.model";
-import { IPurchase, PurchaseModel } from "./purchase.interface";
+import { IPurchase } from "./purchase.interface";
 import { Purchase } from "./purchase.model";
-import { User } from "../user/user.model";
 import ApiError from "../../../errors/ApiErrors";
 import { StatusCodes } from "http-status-codes";
 import { Types } from "mongoose";
+import { Product } from "../product/product.model";
+import { getProductUnitPrice } from "../product/product.utils";
 import stripe from "../../../config/stripe";
 import config from "../../../config";
-import { IUser } from "../user/user.interface";
 import QueryBuilder from "../../builder/queryBuilder";
 
 const createPurchaseDataIntoDB = async (
@@ -34,9 +34,39 @@ const createPurchaseDataIntoDB = async (
       "One or more cart items not found",
     );
   }
-  const amount = cartItems.reduce(
-    (sum, item) => sum + item.lockedUnitPrice * item.quantity,
+  const products = await Product.find({
+    _id: { $in: cartItems.map((item) => item.productId) },
+  }).lean();
+  const productById = new Map(
+    products.map((product) => [product._id.toString(), product]),
+  );
+  const pricedItems = cartItems.map((item) => {
+    const product = productById.get(item.productId.toString());
+    if (!product || !product.status) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        "A product in your cart is unavailable",
+      );
+    }
+    const unitPrice = getProductUnitPrice(product);
+    return { item, product, unitPrice };
+  });
+  const amount = pricedItems.reduce(
+    (sum, row) => sum + row.unitPrice * row.item.quantity,
     0,
+  );
+  await Cart.bulkWrite(
+    pricedItems.map((row) => ({
+      updateOne: {
+        filter: { _id: row.item._id },
+        update: {
+          $set: {
+            unitPrice: row.unitPrice,
+            lockedUnitPrice: row.unitPrice,
+          },
+        },
+      },
+    })),
   );
   const purchase = await Purchase.create({
     cartId: cartItems.map((item) => item._id),
@@ -50,12 +80,14 @@ const createPurchaseDataIntoDB = async (
     mode: "payment",
     success_url: config.stripe.paymentSuccessUrl,
     cancel_url: config.stripe.paymentSuccessUrl,
-    line_items: cartItems.map((item) => ({
-      quantity: item.quantity,
+    line_items: pricedItems.map((row) => ({
+      quantity: row.item.quantity,
       price_data: {
         currency: "usd",
-        unit_amount: Math.round(item.lockedUnitPrice * 100),
-        product_data: { name: `Size ${item.size}` },
+        unit_amount: Math.round(row.unitPrice * 100),
+        product_data: {
+          name: row.product.productName,
+        },
       },
     })),
     metadata: {

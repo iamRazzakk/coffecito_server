@@ -1,39 +1,24 @@
 import { JwtPayload } from "jsonwebtoken";
-import { ICart } from "./cart.interface";
-import { Cart } from "./cart.model";
 import { Types } from "mongoose";
-import QueryBuilder from "../../builder/queryBuilder";
-import { Product } from "../product/product.model";
-import ApiError from "../../../errors/ApiErrors";
 import { StatusCodes } from "http-status-codes";
+import QueryBuilder from "../../builder/queryBuilder";
+import ApiError from "../../../errors/ApiErrors";
+import { getProductUnitPrice } from "../product/product.utils";
 import { IProduct } from "../product/product.interface";
+import { Product } from "../product/product.model";
+import {
+  CartItemView,
+  CartProductSnapshot,
+  CartQuantityAction,
+  ICart,
+  ProductSize,
+} from "./cart.interface";
+import { Cart } from "./cart.model";
 
-// constants
-const PRICE_LOCK_MS = 24 * 60 * 60 * 1000; // 24 hours
+type StoredProduct = IProduct & { _id: Types.ObjectId };
 
-// get current unit price
-const getCurrentUnitPrice = (product: IProduct) =>
-  product.discountPrice ?? product.originalPrice;
-
-// build price lock
-const buildPriceLock = (product: IProduct) => {
-  const lockedUnitPrice = getCurrentUnitPrice(product);
-  return {
-    lockedUnitPrice,
-    lockedOriginalPrice: product.originalPrice,
-    lockedDiscountPrice: product.discountPrice ?? undefined,
-    priceLockedUntil: new Date(Date.now() + PRICE_LOCK_MS),
-  };
-};
-
-// check if price lock is valid
-const isPriceLockValid = (cartItem: { priceLockedUntil?: Date }) =>
-  !!cartItem.priceLockedUntil &&
-  new Date(cartItem.priceLockedUntil).getTime() > Date.now();
-
-// assert product available
 const assertProductAvailable = async (productId: Types.ObjectId | string) => {
-  const product = await Product.findById(productId).lean<IProduct>();
+  const product = await Product.findById(productId).lean<StoredProduct>();
   if (!product) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Product not found");
   }
@@ -46,56 +31,107 @@ const assertProductAvailable = async (productId: Types.ObjectId | string) => {
   return product;
 };
 
-// refresh lock if expired
-const refreshLockIfExpired = async (cartItem: ICart, product: IProduct) => {
-  if (isPriceLockValid(cartItem)) return { refreshed: false };
-  Object.assign(cartItem, buildPriceLock(product));
-  return { refreshed: true };
+const rememberedUnitPrice = (cartItem: ICart) =>
+  cartItem.addedUnitPrice ?? cartItem.lockedUnitPrice ?? cartItem.unitPrice;
+
+const applyCatalogPrice = (cartItem: ICart, product: StoredProduct) => {
+  const unitPrice = getProductUnitPrice(product);
+  cartItem.unitPrice = unitPrice;
+  cartItem.lockedUnitPrice = unitPrice;
+  if (cartItem.addedUnitPrice == null) {
+    cartItem.addedUnitPrice = cartItem.lockedUnitPrice ?? unitPrice;
+  }
+  return unitPrice;
 };
 
-// create cart in to db
-const createCartInToDB = async (cart: ICart, user: JwtPayload) => {
-  if (!cart.quantity || cart.quantity < 1) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Quantity must be at least 1");
-  }
-  const product = await Product.findById(cart?.productId).lean();
-  if (!product) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Product not found");
-  }
-  if (cart.size !== product.size) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      `Selected size must be ${product.size}`,
-    );
-  }
-  if (!product.status) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      "Product is currently unavailable",
-    );
-  }
-  cart.userId = new Types.ObjectId(user.id);
+const isPopulatedProduct = (
+  productId: ICart["productId"] | CartProductSnapshot,
+): productId is CartProductSnapshot =>
+  Boolean(productId) &&
+  typeof productId === "object" &&
+  "originalPrice" in productId;
+
+const toCartItemView = (
+  cartItem: ICart & { _id: Types.ObjectId },
+  product: CartProductSnapshot | StoredProduct | null,
+): CartItemView => {
+  const addedUnitPrice = rememberedUnitPrice(cartItem);
+  const hasCatalogPrice =
+    !!product && typeof product.originalPrice === "number";
+  const unitPrice = hasCatalogPrice
+    ? getProductUnitPrice({
+        discountPrice: product.discountPrice,
+        originalPrice: product.originalPrice as number,
+      })
+    : (cartItem.unitPrice ?? cartItem.lockedUnitPrice ?? addedUnitPrice);
+  const available = !!product && product.status !== false;
+
+  return {
+    _id: cartItem._id,
+    productId: product?._id ?? cartItem.productId,
+    userId: cartItem.userId,
+    shopId: product?.shopId,
+    quantity: cartItem.quantity,
+    size: product?.size ?? cartItem.size,
+    addedUnitPrice,
+    unitPrice,
+    lineTotal: unitPrice * cartItem.quantity,
+    priceChanged: hasCatalogPrice ? unitPrice !== addedUnitPrice : false,
+    available,
+    product: product
+      ? {
+          productName: product.productName,
+          size: product.size,
+          description: product.description,
+          image: product.image,
+          originalPrice: product.originalPrice,
+          discountPrice: product.discountPrice,
+          status: product.status,
+        }
+      : null,
+  };
+};
+
+const createCartInToDB = async (
+  payload: { productId: string; size: ProductSize; quantity?: number },
+  user: JwtPayload,
+) => {
+  const quantity = payload.quantity ?? 1;
+  const product = await assertProductAvailable(payload.productId);
+  const userId = new Types.ObjectId(user.id);
   const existingCartItem = await Cart.findOne({
-    userId: new Types.ObjectId(user.id),
+    userId,
     productId: product._id,
-    size: cart.size,
+    size: payload.size,
   });
+
   if (existingCartItem) {
-    await refreshLockIfExpired(existingCartItem, product);
-    existingCartItem.quantity += cart.quantity;
+    existingCartItem.quantity += quantity;
+    applyCatalogPrice(existingCartItem, product);
     await existingCartItem.save();
-    return existingCartItem;
+    return {
+      created: false,
+      cart: toCartItemView(existingCartItem, product),
+    };
   }
-  return Cart.create({
+
+  const unitPrice = getProductUnitPrice(product);
+  const cartItem = await Cart.create({
     productId: product._id,
-    userId: new Types.ObjectId(user.id),
-    size: cart.size,
-    quantity: cart.quantity,
-    ...buildPriceLock(product),
+    userId,
+    size: payload.size,
+    quantity,
+    addedUnitPrice: unitPrice,
+    unitPrice,
+    lockedUnitPrice: unitPrice,
   });
+
+  return {
+    created: true,
+    cart: toCartItemView(cartItem, product),
+  };
 };
 
-// get all cart items from db
 const getAllCartItemsFromDB = async (
   user: JwtPayload,
   query: Record<string, any>,
@@ -110,27 +146,35 @@ const getAllCartItemsFromDB = async (
     .sort()
     .paginate()
     .populate(["productId"], {
-      productId: "productName size description image",
+      productId:
+        "productName size description image originalPrice discountPrice status shopId",
     });
+
   const [data, meta] = await Promise.all([
     qb.modelQuery.exec(),
     qb.getPaginationInfo(),
   ]);
+
+  const items = data.map((cartItem) => {
+    const product = isPopulatedProduct(cartItem.productId)
+      ? cartItem.productId
+      : null;
+    return toCartItemView(cartItem, product);
+  });
+  const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
+
   return {
-    data,
+    data: items,
     meta,
+    subtotal,
   };
 };
 
-// update cart item quantity from db
 const updateCartItemQuantityFromDB = async (
   id: string,
-  quantity: number,
+  payload: { action?: CartQuantityAction; quantity?: number },
   user: JwtPayload,
 ) => {
-  if (!quantity || quantity < 1) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Quantity must be at least 1");
-  }
   const cartItem = await Cart.findOne({
     _id: id,
     userId: new Types.ObjectId(user.id),
@@ -138,14 +182,45 @@ const updateCartItemQuantityFromDB = async (
   if (!cartItem) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Cart item not found");
   }
+
+  if (payload.action === "decrement") {
+    const step = payload.quantity ?? 1;
+    const nextQuantity = cartItem.quantity - step;
+    if (nextQuantity < 1) {
+      await cartItem.deleteOne();
+      return { removed: true, cart: null };
+    }
+    cartItem.quantity = nextQuantity;
+    const product = await Product.findById(
+      cartItem.productId,
+    ).lean<StoredProduct>();
+    if (product?.status) {
+      applyCatalogPrice(cartItem, product);
+    }
+    await cartItem.save();
+    return {
+      removed: false,
+      cart: toCartItemView(cartItem, product),
+    };
+  }
+
+  if (payload.action === "increment") {
+    cartItem.quantity += payload.quantity ?? 1;
+  } else if (payload.quantity) {
+    cartItem.quantity = payload.quantity;
+  } else {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Send an action or a quantity");
+  }
+
   const product = await assertProductAvailable(cartItem.productId);
-  await refreshLockIfExpired(cartItem, product);
-  cartItem.quantity = quantity;
+  applyCatalogPrice(cartItem, product);
   await cartItem.save();
-  return cartItem;
+  return {
+    removed: false,
+    cart: toCartItemView(cartItem, product),
+  };
 };
 
-// delete cart item from db
 const deleteCartItemFromDB = async (id: string, user: JwtPayload) => {
   const cartItem = await Cart.findOneAndDelete({
     _id: id,
