@@ -42,6 +42,14 @@ const productSchema = new Schema<IProduct, ProductModel>(
       type: Boolean,
       default: true,
     },
+    taxPercentage: {
+      type: Number,
+      required: false,
+    },
+    point: {
+      type: Number,
+      required: false,
+    },
   },
   {
     timestamps: true,

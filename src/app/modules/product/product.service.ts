@@ -7,7 +7,7 @@ import { JwtPayload } from "jsonwebtoken";
 import { Types } from "mongoose";
 
 const createProductToDB = async (payload: IProduct, user: JwtPayload) => {
-  payload.shopId = new Types.ObjectId(user.id);
+  payload.shopId ? payload.shopId : new Types.ObjectId(user.id);
   const product = await Product.create(payload);
   return product;
 };

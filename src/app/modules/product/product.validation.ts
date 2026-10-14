@@ -9,6 +9,8 @@ const productZodSchema = z.object({
   originalPrice: z.number({ required_error: "Original price is required" }),
   image: z.string({ required_error: "Image is required" }).optional(),
   status: z.boolean().optional(),
+  taxPercentage: z.number({ required_error: "Tax percentage is required" }),
+  point: z.number({ required_error: "Point is required" }),
 });
 
 const createProductZodSchema = z.object({

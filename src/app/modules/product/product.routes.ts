@@ -18,10 +18,9 @@ const router = express.Router();
 router
   .route("/")
   .post(
-    auth(USER_ROLES.SUPER_ADMIN),
+    auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.SHOP_OWNER),
     getUploadFields(),
-
-    async (req: Request, res: Response, next: NextFunction) => {
+    async (req: Request, _res: Response, next: NextFunction) => {
       try {
         const data = req.body;
         data.originalPrice = Number(data.originalPrice);

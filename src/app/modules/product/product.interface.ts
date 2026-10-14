@@ -10,6 +10,8 @@ export type IProduct = {
   image: string;
   status: boolean;
   shopId: Types.ObjectId;
+  taxPercentage?: number;
+  point?: number;
 };
 
 export type ProductModel = Model<IProduct>;
