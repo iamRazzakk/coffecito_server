@@ -1,12 +1,40 @@
 import { Schema, model } from "mongoose";
 import { IPurchase, PurchaseModel } from "./purchase.interface";
 
+const purchaseItemSchema = new Schema(
+  {
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+    },
+    size: {
+      type: String,
+      enum: ["S", "M", "L"],
+      required: true,
+    },
+    unitPrice: {
+      type: Number,
+      required: true,
+    },
+  },
+  { _id: false },
+);
+
 const purchaseSchema = new Schema<IPurchase, PurchaseModel>(
   {
     cartId: {
       type: [Schema.Types.ObjectId],
       ref: "Cart",
       required: true,
+    },
+    items: {
+      type: [purchaseItemSchema],
+      required: false,
     },
     userId: {
       type: Schema.Types.ObjectId,

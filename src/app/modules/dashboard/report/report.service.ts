@@ -125,29 +125,45 @@ const getRevenueAndOrders = async () => {
 const getTopProducts = async () => {
   const rows = await Purchase.aggregate([
     { $match: { status: { $in: COMPLETED_STATUSES } } },
-    { $project: { cartId: 1 } },
-    { $unwind: "$cartId" },
     {
       $lookup: {
         from: "carts",
         localField: "cartId",
         foreignField: "_id",
-        as: "cart",
+        as: "cartLines",
       },
     },
-    { $unwind: "$cart" },
+    {
+      $addFields: {
+        lines: {
+          $cond: [
+            { $gt: [{ $size: { $ifNull: ["$items", []] } }, 0] },
+            "$items",
+            {
+              $map: {
+                input: "$cartLines",
+                as: "cart",
+                in: {
+                  productId: "$$cart.productId",
+                  quantity: "$$cart.quantity",
+                  unitPrice: {
+                    $ifNull: ["$$cart.unitPrice", "$$cart.lockedUnitPrice"],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+    { $unwind: "$lines" },
     {
       $group: {
-        _id: "$cart.productId",
-        unitsSold: { $sum: "$cart.quantity" },
+        _id: "$lines.productId",
+        unitsSold: { $sum: "$lines.quantity" },
         revenue: {
           $sum: {
-            $multiply: [
-              {
-                $ifNull: ["$cart.unitPrice", "$cart.lockedUnitPrice"],
-              },
-              "$cart.quantity",
-            ],
+            $multiply: ["$lines.unitPrice", "$lines.quantity"],
           },
         },
       },
