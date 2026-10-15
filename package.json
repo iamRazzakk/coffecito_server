@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "app.ts",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "start": "node dist/server.js",
+    "dev": "node api.js && ts-node-dev --respawn --transpile-only src/server.ts",
+    "start": "node api.js && node dist/server.js",
     "build": "tsc",
     "create-module": "ts-node ./src/gen/gm.ts"
   },
@@ -53,6 +53,7 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^8.0.5",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",
