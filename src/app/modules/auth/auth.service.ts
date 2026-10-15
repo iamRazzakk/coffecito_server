@@ -257,17 +257,36 @@ const resendVerificationPhoneToDB = async (phone: string) => {
 
 // delete user
 const deleteUserFromDB = async (user: JwtPayload) => {
-  const isExistUser = await User.findById(user.id).select("+password");
-  if (!isExistUser) {
+  const userData = await User.findById({ _id: user.id });
+  if (!userData) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
+  // if exist than need to send otp on this phone number after verify the phone and otp then delete the user
+  const otp = generateOTP();
+  await redisService.post({
+    key: `delete-user-otp:${userData.phone.toString()}`,
+    value: Number(otp),
+    expiration: 3 * 60000,
+  });
+  return { otp };
+};
 
-  //check match password
-
-  const updateUser = await User.findByIdAndDelete(user.id);
-  if (!updateUser) {
+const verifyDeleteUserToDB = async (phone: string, otp: string) => {
+  const userData = await User.findOne({ phone }).lean();
+  if (!userData) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
+  const authentication = await redisService.get(
+    `delete-user-otp:${userData.phone.toString()}`,
+  );
+  if (!authentication) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid otp!");
+  }
+  if (Number(authentication) !== Number(otp)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid otp!");
+  }
+  await User.findByIdAndDelete({ _id: userData._id });
+  await redisService.del(`delete-user-otp:${userData.phone.toString()}`);
   return;
 };
 
@@ -281,4 +300,5 @@ export const AuthService = {
   resendVerificationPhoneToDB,
   // socialLoginFromDB,
   deleteUserFromDB,
+  verifyDeleteUserToDB,
 };

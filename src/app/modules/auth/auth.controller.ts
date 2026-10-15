@@ -98,7 +98,18 @@ const resendVerificationPhone = catchAsync(
 // delete user
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthService.deleteUserFromDB(req.user);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Account Deleted successfully",
+    data: result,
+  });
+});
 
+// verify delete user
+const verifyDeleteUser = catchAsync(async (req: Request, res: Response) => {
+  const { phone, otp } = req.body;
+  const result = await AuthService.verifyDeleteUserToDB(phone, otp);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -116,4 +127,5 @@ export const AuthController = {
   newAccessToken,
   resendVerificationPhone,
   deleteUser,
+  verifyDeleteUser,
 };

@@ -55,8 +55,14 @@ router.post(
 
 router.delete(
   "/delete-account",
-  auth(USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER, USER_ROLES.SHOP_OWNER),
   AuthController.deleteUser,
+);
+
+router.post(
+  "/verify-delete-user",
+  authLimiter,
+  AuthController.verifyDeleteUser,
 );
 
 export const AuthRoutes = router;
