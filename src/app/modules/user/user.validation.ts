@@ -19,9 +19,11 @@ const createUserZodSchema = z.object({
     phone: z
       .string({ required_error: "Phone number is required" })
       .regex(/^\+[1-9]\d{1,14}$/, { message: "Invalid phone number" }),
-    role: z.enum(Object.values(USER_ROLES) as [string, ...string[]], {
-      required_error: "Role is required",
-    }).optional(),
+    role: z
+      .enum(Object.values(USER_ROLES) as [string, ...string[]], {
+        required_error: "Role is required",
+      })
+      .optional(),
   }),
 });
 
