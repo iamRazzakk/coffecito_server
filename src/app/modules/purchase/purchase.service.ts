@@ -6,13 +6,21 @@ import ApiError from "../../../errors/ApiErrors";
 import { StatusCodes } from "http-status-codes";
 import { Types } from "mongoose";
 import { Product } from "../product/product.model";
-import { getProductUnitPrice } from "../product/product.utils";
+import { priceProduct } from "../product/product.utils";
+import { Offer } from "../offer/offer.model";
+import { CouponCode } from "../coupon_code/coupon_code.model";
+import { awardPurchasePoints } from "./purchase.points";
+import { finalizeCheckoutPrice } from "./purchase.pricing";
+import {
+  buildStripeLineItems,
+  quoteOffers,
+} from "../offer/offer.calculator";
 import stripe from "../../../config/stripe";
 import config from "../../../config";
 import QueryBuilder from "../../builder/queryBuilder";
 
 const createPurchaseDataIntoDB = async (
-  payload: Pick<IPurchase, "cartId" | "couponCodeId">,
+  payload: Pick<IPurchase, "cartId" | "couponCodeId"> & { offerId?: string },
   user: JwtPayload,
 ) => {
   if (!payload.cartId?.length) {
@@ -40,65 +48,183 @@ const createPurchaseDataIntoDB = async (
   const productById = new Map(
     products.map((product) => [product._id.toString(), product]),
   );
-  const pricedItems = cartItems.map((item) => {
-    const product = productById.get(item.productId.toString());
+  const cartLines = cartItems.map((cartItem) => {
+    const product = productById.get(cartItem.productId.toString());
     if (!product || !product.status) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
         "A product in your cart is unavailable",
       );
     }
-    const unitPrice = getProductUnitPrice(product);
-    return { item, product, unitPrice };
+    const productPrice = priceProduct(product, {
+      size: cartItem.size,
+      extras: cartItem.extras,
+    });
+    return {
+      cartItem,
+      product,
+      unitPrice: productPrice.unitPrice,
+      taxPercentage: productPrice.taxPercentage,
+    };
   });
-  const amount = pricedItems.reduce(
-    (sum, row) => sum + row.unitPrice * row.item.quantity,
+  const shopIds = [
+    ...new Set(cartLines.map((cartLine) => cartLine.product.shopId.toString())),
+  ];
+  const offerFilter: Record<string, unknown> = {
+    shopId: { $in: shopIds },
+    isActive: true,
+  };
+  if (payload.offerId) offerFilter._id = payload.offerId;
+  const offers = await Offer.find(offerFilter).lean();
+  if (payload.offerId && !offers.length) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Offer not found");
+  }
+  const hasPreviousOrder = Boolean(
+    await Purchase.exists({
+      userId: new Types.ObjectId(user.id),
+      status: { $in: ["confirmed", "delivered"] },
+    }),
+  );
+  const offerQuote = quoteOffers(
+    cartLines.map((cartLine) => ({
+      key: cartLine.cartItem._id.toString(),
+      productId: cartLine.product._id.toString(),
+      productName: cartLine.product.productName,
+      size: cartLine.cartItem.size,
+      quantity: cartLine.cartItem.quantity,
+      unitPrice: cartLine.unitPrice,
+      lineTotal: cartLine.unitPrice * cartLine.cartItem.quantity,
+      taxPercentage: cartLine.taxPercentage,
+      shopId: cartLine.product.shopId.toString(),
+    })),
+    offers,
+    { now: new Date(), hasPreviousOrder },
+  );
+  if (payload.offerId && offerQuote.offer?._id.toString() !== payload.offerId) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "This offer does not apply to the cart",
+    );
+  }
+
+  const coupon = payload.couponCodeId
+    ? await CouponCode.findById(payload.couponCodeId).lean()
+    : null;
+  if (payload.couponCodeId && !coupon) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Coupon not found");
+  }
+  const checkoutPrice = finalizeCheckoutPrice(offerQuote, coupon);
+
+  const stripeLines = buildStripeLineItems(checkoutPrice.lines);
+  const chargedCents = stripeLines.reduce(
+    (sum, line) => sum + line.unitAmount * line.quantity,
     0,
   );
+  if (chargedCents > 0 && chargedCents < 50) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      "Payable amount is below the minimum card charge",
+    );
+  }
+
+  const purchaseItems = checkoutPrice.lines.map((line) => ({
+    productId: new Types.ObjectId(line.productId),
+    quantity: line.quantity,
+    size: line.size,
+    unitPrice: line.quantity ? line.payable / line.quantity : 0,
+  }));
+  const userId = new Types.ObjectId(user.id);
+  const purchase = await Purchase.create({
+    cartId: cartItems.map((item) => item._id),
+    userId,
+    subtotal: checkoutPrice.merchandiseSubtotal,
+    offerDiscountAmount: checkoutPrice.offerDiscountAmount,
+    couponDiscountAmount: checkoutPrice.couponDiscountAmount,
+    discountAmount: checkoutPrice.discountAmount,
+    taxableAmount: checkoutPrice.taxableAmount,
+    taxAmount: checkoutPrice.taxAmount,
+    amount: checkoutPrice.payableAmount,
+    offerId: offerQuote.offer?._id,
+    couponCodeId: payload.couponCodeId,
+    items: purchaseItems,
+    status: chargedCents === 0 ? "confirmed" : "pending",
+  });
+
   await Cart.bulkWrite(
-    pricedItems.map((row) => ({
+    cartLines.map((cartLine) => ({
       updateOne: {
-        filter: { _id: row.item._id },
+        filter: { _id: cartLine.cartItem._id },
         update: {
           $set: {
-            unitPrice: row.unitPrice,
-            lockedUnitPrice: row.unitPrice,
+            unitPrice: cartLine.unitPrice,
+            lockedUnitPrice: cartLine.unitPrice,
           },
         },
       },
     })),
   );
-  const purchase = await Purchase.create({
-    cartId: cartItems.map((item) => item._id),
-    userId: new Types.ObjectId(user.id),
-    amount,
-    couponCodeId: payload.couponCodeId,
-    status: "pending",
-  });
+
+  if (chargedCents === 0) {
+    await awardPurchasePoints(userId, purchaseItems);
+    await Cart.deleteMany({
+      _id: { $in: cartItems.map((item) => item._id) },
+      userId,
+    });
+    return {
+      url: null,
+      purchaseId: purchase._id,
+      subtotal: checkoutPrice.merchandiseSubtotal,
+      offerDiscountAmount: checkoutPrice.offerDiscountAmount,
+      couponDiscountAmount: checkoutPrice.couponDiscountAmount,
+      discountAmount: checkoutPrice.discountAmount,
+      taxableAmount: checkoutPrice.taxableAmount,
+      taxAmount: checkoutPrice.taxAmount,
+      amount: checkoutPrice.payableAmount,
+      offerId: offerQuote.offer?._id ?? null,
+      couponCodeId: payload.couponCodeId ?? null,
+    };
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     success_url: config.stripe.paymentSuccessUrl,
     cancel_url: config.stripe.paymentSuccessUrl,
-    line_items: pricedItems.map((row) => ({
-      quantity: row.item.quantity,
+    line_items: stripeLines.map((line) => ({
+      quantity: line.quantity,
       price_data: {
         currency: "usd",
-        unit_amount: Math.round(row.unitPrice * 100),
+        unit_amount: line.unitAmount,
         product_data: {
-          name: row.product.productName,
+          name: line.name,
         },
       },
     })),
     metadata: {
       purchaseId: purchase._id.toString(),
       userId: user.id,
+      offerId: offerQuote.offer?._id.toString() ?? "",
+      couponCodeId: payload.couponCodeId?.toString() ?? "",
+      offerDiscountAmount: String(checkoutPrice.offerDiscountAmount),
+      couponDiscountAmount: String(checkoutPrice.couponDiscountAmount),
+      discountAmount: String(checkoutPrice.discountAmount),
     },
   });
   if (!session.url) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Failed to create payment url");
   }
-  return { url: session.url, purchaseId: purchase._id };
+  return {
+    url: session.url,
+    purchaseId: purchase._id,
+    subtotal: checkoutPrice.merchandiseSubtotal,
+    offerDiscountAmount: checkoutPrice.offerDiscountAmount,
+    couponDiscountAmount: checkoutPrice.couponDiscountAmount,
+    discountAmount: checkoutPrice.discountAmount,
+    taxableAmount: checkoutPrice.taxableAmount,
+    taxAmount: checkoutPrice.taxAmount,
+    amount: checkoutPrice.payableAmount,
+    offerId: offerQuote.offer?._id ?? null,
+    couponCodeId: payload.couponCodeId ?? null,
+  };
 };
 
 const getMyPurchasesHistoryFromDB = async (

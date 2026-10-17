@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { USER_ROLES } from "../enums/user";
 import { Cart } from "../app/modules/cart/cart.model";
 import { Purchase } from "../app/modules/purchase/purchase.model";
+import { awardPurchasePoints } from "../app/modules/purchase/purchase.points";
 import { User } from "../app/modules/user/user.model";
 import { sendNotifications } from "./notificationsHelper";
 
@@ -28,18 +29,26 @@ const confirmPaidCheckout = async (session: Stripe.Checkout.Session) => {
       }).session(dbSession);
 
       if (cartItems.length) {
-        purchase.items = cartItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          size: item.size,
-          unitPrice: item.unitPrice ?? item.lockedUnitPrice ?? 0,
-        }));
-        await purchase.save({ session: dbSession });
+        if (!purchase.items?.length) {
+          purchase.items = cartItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            size: item.size,
+            unitPrice: item.unitPrice ?? item.lockedUnitPrice ?? 0,
+          }));
+          await purchase.save({ session: dbSession });
+        }
         await Cart.deleteMany({
           _id: { $in: cartItems.map((item) => item._id) },
           userId: purchase.userId,
         }).session(dbSession);
       }
+
+      await awardPurchasePoints(
+        purchase.userId,
+        purchase.items ?? [],
+        dbSession,
+      );
 
       await Purchase.updateOne(
         { _id: purchaseId, status: "pending" },

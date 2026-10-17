@@ -41,9 +41,46 @@ const purchaseSchema = new Schema<IPurchase, PurchaseModel>(
       ref: "User",
       required: true,
     },
+    subtotal: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    offerDiscountAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    couponDiscountAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    discountAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    taxableAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    taxAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
     amount: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    offerId: {
+      type: Schema.Types.ObjectId,
+      ref: "Offer",
+      required: false,
     },
     couponCodeId: {
       type: Schema.Types.ObjectId,

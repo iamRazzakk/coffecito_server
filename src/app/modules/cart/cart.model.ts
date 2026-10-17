@@ -18,6 +18,14 @@ const cartSchema = new Schema<ICart, CartModel>(
       enum: ["S", "M", "L"],
       required: true,
     },
+    extras: {
+      type: [String],
+      default: [],
+    },
+    extrasKey: {
+      type: String,
+      default: "",
+    },
     quantity: {
       type: Number,
       required: true,
@@ -42,13 +50,19 @@ const cartSchema = new Schema<ICart, CartModel>(
   { timestamps: true },
 );
 
-cartSchema.index({ userId: 1, productId: 1, size: 1 }, { unique: true });
+cartSchema.index(
+  { userId: 1, productId: 1, size: 1, extrasKey: 1 },
+  { unique: true },
+);
 cartSchema.index({ userId: 1 });
 
 export const Cart = model<ICart, CartModel>("Cart", cartSchema);
 
 const dropSizeLessUniqueIndex = () => {
   void Cart.collection.dropIndex("userId_1_productId_1").catch(() => undefined);
+  void Cart.collection
+    .dropIndex("userId_1_productId_1_size_1")
+    .catch(() => undefined);
 };
 
 if (mongoose.connection.readyState === 1) {

@@ -4,6 +4,9 @@ import crypto from "crypto";
 
 // Access Token create
 const createAccessToken = (user: { id: string; role: string }) => {
+  if (!user.role) {
+    throw new Error("Access token requires a role");
+  }
   // @ts-ignore
   return jwt.sign(
     {
@@ -16,25 +19,31 @@ const createAccessToken = (user: { id: string; role: string }) => {
     },
     config.jwt.secret,
     {
-      expiresIn: config.jwt.accessExpiresIn,
+      expiresIn: config.jwt
+        .accessExpiresIn as unknown as jwt.SignOptions["expiresIn"],
       algorithm: "HS256" as const,
     },
   );
 };
 
 // Refresh Token create
-const createRefreshToken = (userId: string) => {
+const createRefreshToken = (userId: string, role: string) => {
+  if (!role) {
+    throw new Error("Refresh token requires a role");
+  }
   // @ts-ignore
   return jwt.sign(
     {
       id: userId,
+      role,
       jti: crypto.randomUUID(),
       iss: config.jwt.issuer,
       aud: config.jwt.audience,
     },
     config.jwt.refreshSecret,
     {
-      expiresIn: config.jwt.refreshExpiresIn,
+      expiresIn: config.jwt
+        .refreshExpiresIn as unknown as jwt.SignOptions["expiresIn"],
     },
   );
 };

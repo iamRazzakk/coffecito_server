@@ -1,54 +1,98 @@
 import { Schema, model } from "mongoose";
-import { IProduct, ProductModel } from "./product.interface";
+import {
+  IProduct,
+  IProductExtra,
+  IProductSize,
+  ProductModel,
+} from "./product.interface";
+
+const productSizeSchema = new Schema<IProductSize>(
+  {
+    name: {
+      type: String,
+      enum: ["S", "M", "L"],
+      required: true,
+    },
+    additionalPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+  },
+  { _id: false },
+);
+
+const productExtraSchema = new Schema<IProductExtra>(
+  {
+    name: {
+      type: String,
+      required: false,
+    },
+    additionalPrice: {
+      type: Number,
+      required: false,
+      min: 0,
+    },
+  },
+  { _id: false },
+);
 
 const productSchema = new Schema<IProduct, ProductModel>(
   {
     productName: {
       type: String,
       required: true,
+      trim: true,
     },
     categoryId: {
       type: Schema.Types.ObjectId,
       ref: "Category",
       required: true,
     },
-    size: {
-      type: String,
-      enum: ["S", "M", "L"],
-      required: true,
-    },
     description: {
       type: String,
-      required: true,
     },
-    discountPrice: {
-      type: Number,
+    image: {
+      type: String,
       required: true,
     },
     originalPrice: {
       type: Number,
       required: true,
+      min: 0,
     },
-    image: {
-      type: String,
-      required: true,
+    discountPrice: {
+      type: Number,
+      min: 0,
+    },
+    costPrice: {
+      type: Number,
+      min: 0,
+    },
+    sizes: {
+      type: [productSizeSchema],
+      default: [],
+    },
+    extras: {
+      type: [productExtraSchema],
+      default: [],
+    },
+    status: {
+      type: Boolean,
+      default: true,
     },
     shopId: {
       type: Schema.Types.ObjectId,
       ref: "Shop",
       required: true,
     },
-    status: {
-      type: Boolean,
-      default: true,
-    },
     taxPercentage: {
       type: Number,
-      required: false,
+      min: 0,
     },
     point: {
       type: Number,
-      required: false,
+      min: 0,
     },
   },
   {

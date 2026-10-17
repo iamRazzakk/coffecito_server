@@ -90,15 +90,19 @@ const verifyPhoneToDB = async (payload: IVerifyEmail) => {
   let message;
   let data;
 
-  await User.findOneAndUpdate({ phone }, { isVerified: true });
+  const role = isExistUser.role || USER_ROLES.USER;
+  await User.findOneAndUpdate({ phone }, { isVerified: true, role });
   await redisService.del(`otp:${isExistUser.phone.toString()}`);
   message = "Phone verify successfully";
   data = {
     accessToken: jwtHelpers.createAccessToken({
       id: isExistUser._id.toString(),
-      role: isExistUser.role,
+      role,
     }),
-    refreshToken: jwtHelpers.createRefreshToken(isExistUser._id.toString()),
+    refreshToken: jwtHelpers.createRefreshToken(
+      isExistUser._id.toString(),
+      role,
+    ),
   };
   return { message, data };
 };
@@ -221,12 +225,16 @@ const newAccessTokenToUser = async (refreshToken: string) => {
   }
 
   // New Access Token create
+  const role = user.role || USER_ROLES.USER;
   const newAccessToken = jwtHelpers.createAccessToken({
     id: user._id.toString(),
-    role: user.role,
+    role,
   });
 
-  const newRefreshToken = jwtHelpers.createRefreshToken(user._id.toString());
+  const newRefreshToken = jwtHelpers.createRefreshToken(
+    user._id.toString(),
+    role,
+  );
 
   return {
     accessToken: newAccessToken,

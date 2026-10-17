@@ -23,8 +23,6 @@ router
     async (req: Request, _res: Response, next: NextFunction) => {
       try {
         const data = req.body;
-        data.originalPrice = Number(data.originalPrice);
-        data.discountPrice = Number(data.discountPrice);
         const image = getSingleFilePath(
           req.files as Record<string, Express.Multer.File[]>,
           "image",
@@ -67,13 +65,11 @@ router
     async (req: Request, _res: Response, next: NextFunction) => {
       try {
         const data = req.body;
-        data.originalPrice = Number(data.originalPrice);
-        data.discountPrice = Number(data.discountPrice);
         const image = getSingleFilePath(
           req.files as Record<string, Express.Multer.File[]>,
           "image",
         );
-        data.image = image;
+        if (image) data.image = image;
         req.body = data;
 
         next();

@@ -10,7 +10,14 @@ export type IPurchaseItem = {
 export type IPurchase = {
   cartId: Types.ObjectId[];
   userId: Types.ObjectId;
+  subtotal: number;
+  offerDiscountAmount: number;
+  couponDiscountAmount: number;
+  discountAmount: number;
+  taxableAmount: number;
+  taxAmount: number;
   amount: number;
+  offerId?: Types.ObjectId;
   couponCodeId?: Types.ObjectId;
   status: "pending" | "confirmed" | "delivered" | "cancelled";
   items?: IPurchaseItem[];
