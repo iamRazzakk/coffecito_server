@@ -5,6 +5,7 @@ const createCartValidationSchema = z.object({
   body: z.object({
     productId: checkValidID("Product ID is required"),
     size: z.enum(["S", "M", "L"], { required_error: "Size is required" }),
+    extras: z.array(z.string().min(1)).optional(),
     quantity: z
       .number({ required_error: "Quantity is required" })
       .int("Quantity must be a whole number")

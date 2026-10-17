@@ -3,7 +3,12 @@ import { Types } from "mongoose";
 import { StatusCodes } from "http-status-codes";
 import QueryBuilder from "../../builder/queryBuilder";
 import ApiError from "../../../errors/ApiErrors";
-import { getProductUnitPrice } from "../product/product.utils";
+import {
+  extrasKeyFor,
+  lineTax,
+  priceProduct,
+  selectedExtraNames,
+} from "../product/product.utils";
 import { IProduct } from "../product/product.interface";
 import { Product } from "../product/product.model";
 import {
@@ -34,8 +39,27 @@ const assertProductAvailable = async (productId: Types.ObjectId | string) => {
 const rememberedUnitPrice = (cartItem: ICart) =>
   cartItem.addedUnitPrice ?? cartItem.lockedUnitPrice ?? cartItem.unitPrice;
 
+const assertSelection = (
+  product: StoredProduct,
+  size: ProductSize,
+  extras: string[],
+) => {
+  if (product.sizes?.length && !product.sizes.some((item) => item.name === size)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Selected size is not available");
+  }
+  extras.forEach((name) => {
+    const exists = product.extras?.some((item) => item.name === name);
+    if (!exists) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, `Extra ${name} is not available`);
+    }
+  });
+};
+
 const applyCatalogPrice = (cartItem: ICart, product: StoredProduct) => {
-  const unitPrice = getProductUnitPrice(product);
+  const unitPrice = priceProduct(product, {
+    size: cartItem.size,
+    extras: cartItem.extras,
+  }).unitPrice;
   cartItem.unitPrice = unitPrice;
   cartItem.lockedUnitPrice = unitPrice;
   if (cartItem.addedUnitPrice == null) {
@@ -58,12 +82,25 @@ const toCartItemView = (
   const addedUnitPrice = rememberedUnitPrice(cartItem);
   const hasCatalogPrice =
     !!product && typeof product.originalPrice === "number";
-  const unitPrice = hasCatalogPrice
-    ? getProductUnitPrice({
-        discountPrice: product.discountPrice,
-        originalPrice: product.originalPrice as number,
-      })
-    : (cartItem.unitPrice ?? cartItem.lockedUnitPrice ?? addedUnitPrice);
+  const priced = hasCatalogPrice
+    ? priceProduct(
+        {
+          discountPrice: product.discountPrice,
+          originalPrice: product.originalPrice as number,
+          sizes: product.sizes,
+          extras: product.extras,
+          taxPercentage: product.taxPercentage,
+        },
+        { size: cartItem.size, extras: cartItem.extras },
+      )
+    : null;
+  const unitPrice =
+    priced?.unitPrice ??
+    cartItem.unitPrice ??
+    cartItem.lockedUnitPrice ??
+    addedUnitPrice;
+  const taxPercentage = priced?.taxPercentage ?? 0;
+  const taxAmount = lineTax(unitPrice * cartItem.quantity, taxPercentage);
   const available = !!product && product.status !== false;
 
   return {
@@ -72,16 +109,21 @@ const toCartItemView = (
     userId: cartItem.userId,
     shopId: product?.shopId,
     quantity: cartItem.quantity,
-    size: product?.size ?? cartItem.size,
+    size: cartItem.size,
+    extras: cartItem.extras ?? [],
     addedUnitPrice,
     unitPrice,
-    lineTotal: unitPrice * cartItem.quantity,
+    sizePrice: priced?.sizePrice ?? 0,
+    extrasPrice: priced?.extrasPrice ?? 0,
+    taxPercentage,
+    taxAmount,
+    lineTotal: unitPrice * cartItem.quantity + taxAmount,
     priceChanged: hasCatalogPrice ? unitPrice !== addedUnitPrice : false,
     available,
     product: product
       ? {
           productName: product.productName,
-          size: product.size,
+          size: cartItem.size,
           description: product.description,
           image: product.image,
           originalPrice: product.originalPrice,
@@ -93,16 +135,27 @@ const toCartItemView = (
 };
 
 const createCartInToDB = async (
-  payload: { productId: string; size: ProductSize; quantity?: number },
+  payload: {
+    productId: string;
+    size: ProductSize;
+    extras?: string[];
+    quantity?: number;
+  },
   user: JwtPayload,
 ) => {
   const quantity = payload.quantity ?? 1;
+  const extras = selectedExtraNames(payload.extras);
+  const extrasKey = extrasKeyFor(extras);
   const product = await assertProductAvailable(payload.productId);
+  assertSelection(product, payload.size, extras);
   const userId = new Types.ObjectId(user.id);
   const existingCartItem = await Cart.findOne({
     userId,
     productId: product._id,
     size: payload.size,
+    ...(extrasKey
+      ? { extrasKey }
+      : { $or: [{ extrasKey: "" }, { extrasKey: { $exists: false } }] }),
   });
 
   if (existingCartItem) {
@@ -115,11 +168,16 @@ const createCartInToDB = async (
     };
   }
 
-  const unitPrice = getProductUnitPrice(product);
+  const unitPrice = priceProduct(product, {
+    size: payload.size,
+    extras,
+  }).unitPrice;
   const cartItem = await Cart.create({
     productId: product._id,
     userId,
     size: payload.size,
+    extras,
+    extrasKey,
     quantity,
     addedUnitPrice: unitPrice,
     unitPrice,
@@ -147,7 +205,7 @@ const getAllCartItemsFromDB = async (
     .paginate()
     .populate(["productId"], {
       productId:
-        "productName size description image originalPrice discountPrice status shopId",
+        "productName description image originalPrice discountPrice sizes extras taxPercentage status shopId",
     });
 
   const [data, meta] = await Promise.all([
