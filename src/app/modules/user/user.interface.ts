@@ -21,6 +21,7 @@ export type IUser = {
   isActive: boolean;
   isBanned: boolean;
   role: USER_ROLES;
+  point?: number;
   contactInfo?: IContactInfo;
 };
 

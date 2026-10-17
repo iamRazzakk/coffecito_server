@@ -36,7 +36,7 @@ const userSchema = new Schema<IUser, UserModal>(
     role: {
       type: String,
       enum: Object.values(USER_ROLES),
-      required: false,
+      default: USER_ROLES.USER,
     },
     birthDate: {
       type: Date,
@@ -46,6 +46,12 @@ const userSchema = new Schema<IUser, UserModal>(
       type: String,
       required: false,
       default: null,
+    },
+    point: {
+      type: Number,
+      required: false,
+      min: 0,
+      default: 0,
     },
     contactInfo: {
       location: {

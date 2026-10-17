@@ -24,7 +24,7 @@ export function createCookieOptions(maxAge: number): CookieOptions {
 
 export function setAuthCookies(res: Response, userId: string, role: string) {
   const accessToken = jwtHelpers.createAccessToken({ id: userId, role: role });
-  const refreshToken = jwtHelpers.createRefreshToken(userId);
+  const refreshToken = jwtHelpers.createRefreshToken(userId, role);
 
   const accessMaxAge = 15 * 60 * 1000;
   const refreshMaxAge = 7 * 24 * 60 * 60 * 1000;

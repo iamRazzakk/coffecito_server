@@ -8,6 +8,8 @@ export type ICart = {
   productId: Types.ObjectId;
   userId: Types.ObjectId;
   size: ProductSize;
+  extras?: string[];
+  extrasKey?: string;
   quantity: number;
   addedUnitPrice: number;
   unitPrice: number;
@@ -24,6 +26,9 @@ export type CartProductSnapshot = {
   image?: string;
   originalPrice?: number;
   discountPrice?: number | null;
+  sizes?: { name: string; additionalPrice?: number }[];
+  extras?: { name?: string; additionalPrice?: number }[];
+  taxPercentage?: number | null;
   status?: boolean;
   shopId?: Types.ObjectId;
 };
@@ -35,8 +40,13 @@ export type CartItemView = {
   shopId?: Types.ObjectId;
   quantity: number;
   size?: ProductSize;
+  extras: string[];
   addedUnitPrice: number;
   unitPrice: number;
+  sizePrice: number;
+  extrasPrice: number;
+  taxPercentage: number;
+  taxAmount: number;
   lineTotal: number;
   priceChanged: boolean;
   available: boolean;
