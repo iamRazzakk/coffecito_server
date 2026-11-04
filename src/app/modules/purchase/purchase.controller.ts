@@ -50,8 +50,37 @@ const getAllPurchaseHistory = catchAsync(
   },
 );
 
+const getUserOrderHistory = catchAsync(async (req: Request, res: Response) => {
+  const query = req.query;
+  const result = await PurchaseServices.getUserOrderHistoryFromDB(
+    req.user,
+    query,
+  );
+  sendResponse(res, {
+    success: true,
+    message: "Order history fetched successfully",
+    statusCode: StatusCodes.OK,
+    pagination: result.meta,
+    data: result.data,
+  });
+});
+
+const getUserLastOrder = catchAsync(async (req: Request, res: Response) => {
+  const result = await PurchaseServices.getUserLastOrderFromDB(req.user);
+  sendResponse(res, {
+    success: true,
+    message: "Last order fetched successfully",
+    statusCode: StatusCodes.OK,
+    data: result,
+  });
+});
+
+
+
 export const PurchaseController = {
   createPurchase,
   getMyPurchasesHistory,
   getAllPurchaseHistory,
+  getUserOrderHistory,
+  getUserLastOrder,
 };

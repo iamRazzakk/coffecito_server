@@ -49,8 +49,10 @@ const offerBody = z.object({
   description: z.string({ required_error: "Description is required" }).min(1),
   image: z.string({ required_error: "Image is required" }).min(1),
   offerType: z.enum(OFFER_TYPES, { required_error: "Offer type is required" }),
-  shopId: z.string({ required_error: "Shop id is required" }),
-  productIds: jsonArray(z.array(z.string())),
+  productId: z.preprocess((value) => {
+    const next = emptyToUndefined(value);
+    return next;
+  }, z.string().optional()),
   isActive: booleanField,
   buyQuantity: intField,
   getQuantity: intField,
@@ -76,8 +78,14 @@ const offerBody = z.object({
   ),
   startAt: dateField,
   endAt: dateField,
-  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  startTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
   days: jsonArray(z.array(z.number().int().min(0).max(6))),
   giftProductId: z.string().optional(),
   comboProductIds: jsonArray(z.array(z.string())),

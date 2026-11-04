@@ -57,11 +57,12 @@ const deleteShopById = catchAsync(async (req: Request, res: Response) => {
 
 const getAllShopProductBasedOnCategoryId = catchAsync(
   async (req: Request, res: Response) => {
+    const { shopId, categoryId, ...query } = req.query;
     const products =
       await ShopServices.getAllShopProductBasedOnCategoryIdFromDB(
-        req.params.id,
-        req.params.categoryId,
-        req.query,
+        String(shopId),
+        String(categoryId),
+        query,
       );
     sendResponse(res, {
       success: true,

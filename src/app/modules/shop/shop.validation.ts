@@ -12,6 +12,20 @@ const hoursZodSchema = z.object({
   close: z.string({ required_error: "Close time is required" }).trim().min(1),
 });
 
+const locationZodSchema = z.object({
+  type: z.enum(["Point"], { required_error: "Location type is required" }),
+  coordinates: z
+    .array(z.number(), { required_error: "Coordinates are required" })
+    .length(2, "Coordinates must be [longitude, latitude]"),
+});
+
+const contactInfoZodSchema = z.object({
+  location: locationZodSchema,
+  whatsapp: z.string().trim().optional(),
+  instagram: z.string().trim().optional(),
+  facebook: z.string().trim().optional(),
+});
+
 const shopZodSchema = z.object({
   name: z.string({ required_error: "Name is required" }).trim().min(1),
   phone: z.string().trim().optional(),
@@ -20,6 +34,7 @@ const shopZodSchema = z.object({
   status: z.enum(SHOP_STATUS).optional(),
   faqs: z.array(faqZodSchema).optional(),
   hours: z.array(hoursZodSchema).optional(),
+  contactInfo: contactInfoZodSchema,
 });
 
 const createShopZodSchema = z.object({
@@ -35,10 +50,12 @@ const objectIdSchema = z
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid id");
 
 const shopCategoryProductsZodSchema = z.object({
-  params: z.object({
-    id: objectIdSchema,
-    categoryId: objectIdSchema,
-  }),
+  query: z
+    .object({
+      shopId: objectIdSchema,
+      categoryId: objectIdSchema,
+    })
+    .passthrough(),
 });
 
 export const ShopValidations = {

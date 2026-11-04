@@ -5,20 +5,18 @@ import catchAsync from "../../../shared/catchAsync";
 import sendResponse from "../../../shared/sendResponse";
 
 // create user
-const createUser = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const { ...userData } = req.body;
-    const result = await UserService.createUserToDB(userData);
+const createUser = catchAsync(async (req: Request, res: Response) => {
+  const { ...userData } = req.body;
+  const result = await UserService.createUserToDB(userData);
 
-    sendResponse(res, {
-      success: true,
-      statusCode: StatusCodes.CREATED,
-      message:
-        "Your account has been successfully created. Verify Your Email By OTP. Check your email",
-      data: result,
-    });
-  },
-);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.CREATED,
+    message:
+      "Your account has been successfully created. Verify Your Email By OTP. Check your email",
+    data: result,
+  });
+});
 
 // retrieved user profile
 const getUserProfile = catchAsync(async (req: Request, res: Response) => {
@@ -48,7 +46,6 @@ const updateProfile = catchAsync(
     });
   },
 );
-
 
 export const UserController = {
   createUser,

@@ -6,7 +6,7 @@ import { Shop } from "./shop.model";
 import { User } from "../user/user.model";
 import { IUser } from "../user/user.interface";
 import { USER_ROLES } from "../../../enums/user";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { Product } from "../product/product.model";
 // create shop in to db
 const createShopToDB = async (payload: IShop) => {
@@ -95,12 +95,14 @@ const getAllShopProductBasedOnCategoryIdFromDB = async (
   categoryId: string,
   query: Record<string, any>,
 ) => {
-  const qb = new QueryBuilder(Product.find(), {
-    ...query,
-    shopId,
-    categoryId,
-    status: true,
-  })
+  const qb = new QueryBuilder(
+    Product.find({
+      shopId: new Types.ObjectId(shopId),
+      categoryId: new Types.ObjectId(categoryId),
+      status: true,
+    }),
+    query,
+  )
     .filter()
     .sort()
     .paginate();

@@ -4,7 +4,6 @@ import { IUser, UserModal } from "./user.interface";
 import bcrypt from "bcrypt";
 import ApiError from "../../../errors/ApiErrors";
 import { StatusCodes } from "http-status-codes";
-import config from "../../../config";
 
 const userSchema = new Schema<IUser, UserModal>(
   {

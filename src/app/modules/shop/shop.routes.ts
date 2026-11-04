@@ -59,6 +59,14 @@ router
   );
 
 router
+  .route("/products")
+  .get(
+    auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER, USER_ROLES.SHOP_OWNER),
+    validateRequest(ShopValidations.shopCategoryProductsZodSchema),
+    ShopController.getAllShopProductBasedOnCategoryId,
+  );
+
+router
   .route("/:id")
   .get(
     auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
@@ -72,13 +80,5 @@ router
     ShopController.updateShopById,
   )
   .delete(auth(USER_ROLES.SUPER_ADMIN), ShopController.deleteShopById);
-
-router
-  .route("/:id/category/:categoryId/products")
-  .get(
-    auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER, USER_ROLES.SHOP_OWNER),
-    validateRequest(ShopValidations.shopCategoryProductsZodSchema),
-    ShopController.getAllShopProductBasedOnCategoryId,
-  );
 
 export const ShopRoutes = router;

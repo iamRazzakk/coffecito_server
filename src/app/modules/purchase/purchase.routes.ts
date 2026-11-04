@@ -18,4 +18,16 @@ router
     auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
     PurchaseController.getMyPurchasesHistory,
   );
+router
+  .route("/history")
+  .get(
+    auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+    PurchaseController.getUserOrderHistory,
+  );
+router
+  .route("/last")
+  .get(
+    auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+    PurchaseController.getUserLastOrder,
+  );
 export const PurchaseRoutes = router;

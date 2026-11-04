@@ -52,8 +52,8 @@ const idText = (id: Types.ObjectId | string) => id.toString();
 const qualifyingLines = (offer: IOffer, lines: OfferLine[]) =>
   lines.filter((line) => {
     if (line.shopId !== idText(offer.shopId)) return false;
-    if (!offer.productIds?.length) return true;
-    return offer.productIds.some((productId) => idText(productId) === line.productId);
+    if (!offer.productId) return true;
+    return idText(offer.productId) === line.productId;
   });
 
 const sumLines = (lines: OfferLine[]) =>
@@ -254,8 +254,8 @@ const discountFor = (
       discount = tierDiscount(offer, scopedSubtotal);
       break;
     case "FREE_GIFT": {
-      if (offer.productIds?.length && !scoped.length) return null;
-      const basis = offer.productIds?.length
+      if (offer.productId && !scoped.length) return null;
+      const basis = offer.productId
         ? scoped
         : lines.filter((line) => line.shopId === idText(offer.shopId));
       const gift = giftDiscount(offer, lines, basis);

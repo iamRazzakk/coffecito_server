@@ -20,7 +20,8 @@ router.get(
 router
   .route("/")
   .post(
-    validateRequest(UserValidation.createUserZodSchema),
+
+    // validateRequest(UserValidation.createUserZodSchema),
     UserController.createUser,
   )
   .patch(

@@ -7,6 +7,7 @@ import { socketHelper } from "./helpers/socketHelper";
 import { Server } from "socket.io";
 import seedSuperAdmin from "./DB";
 import "./worker/email.worker"; // Start BullMQ worker
+import { scheduleCouponExpiry } from "./worker/coupon.worker";
 // redis client
 import "./config/redis.config";
 import { RedisClient } from "./config/redis.config";
@@ -38,6 +39,7 @@ async function main() {
 
     await mongoose.connect(config.database_url as string);
     logger.info(colors.green("🚀 Database connected successfully"));
+    await scheduleCouponExpiry();
 
     const port =
       typeof config.port === "number" ? config.port : Number(config.port);

@@ -88,37 +88,21 @@ const assertOfferConfig = (payload: Partial<IOffer>) => {
 };
 
 const assertShopAndProducts = async (payload: Partial<IOffer>) => {
-  if (payload.shopId) {
-    const shop = await Shop.findById(payload.shopId);
-    if (!shop) {
-      throw new ApiError(StatusCodes.NOT_FOUND, "Shop not found");
-    }
-  }
-
-  const productIds = [
-    ...(payload.productIds ?? []),
+  const linkedProductIds = [
+    ...(payload.productId ? [payload.productId] : []),
     ...(payload.comboProductIds ?? []),
     ...(payload.giftProductId ? [payload.giftProductId] : []),
   ];
-  if (!productIds.length) return;
+  if (!linkedProductIds.length) return;
 
-  const products = await Product.find({ _id: { $in: productIds } }).select(
-    "shopId",
-  );
-  if (products.length !== new Set(productIds.map((id) => id.toString())).size) {
+  const products = await Product.find({
+    _id: { $in: linkedProductIds },
+  }).select("shopId");
+  if (
+    products.length !==
+    new Set(linkedProductIds.map((id) => id.toString())).size
+  ) {
     throw new ApiError(StatusCodes.NOT_FOUND, "One or more products not found");
-  }
-  if (payload.shopId) {
-    const shopId = payload.shopId.toString();
-    const outsideShop = products.some(
-      (product) => product.shopId?.toString() !== shopId,
-    );
-    if (outsideShop) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        "Offer products must belong to the same shop",
-      );
-    }
   }
 };
 
@@ -127,8 +111,9 @@ const toObjectIds = (ids?: string[]) =>
 
 const normalizePayload = (payload: IOffer) => ({
   ...payload,
-  shopId: new Types.ObjectId(payload.shopId),
-  productIds: toObjectIds(payload.productIds as unknown as string[]),
+  productId: payload.productId
+    ? new Types.ObjectId(payload.productId)
+    : undefined,
   comboProductIds: payload.comboProductIds
     ? toObjectIds(payload.comboProductIds as unknown as string[])
     : undefined,
@@ -190,7 +175,7 @@ const deleteOfferByIdFromDB = async (id: string) => {
 };
 
 const getAllActiveOffersFromDB = async () => {
-  return Offer.find({ isActive: true }).select("image");
+  return Offer.find({ isActive: true }).select("image productId");
 };
 
 export const OfferServices = {

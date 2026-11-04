@@ -16,6 +16,7 @@ import { NotificationRoutes } from "../modules/notification/notification.routes"
 import { ReportRoutes } from "../modules/dashboard/report/report.routes";
 import { FavoriteRoutes } from "../modules/favorite/favorite.routes";
 import { OfferRoutes } from "../modules/offer/offer.routes";
+import { GiftRoutes } from "../modules/gift/gift.routes";
 const router = express.Router();
 
 const apiRoutes = [
@@ -36,6 +37,7 @@ const apiRoutes = [
   { path: "/report", route: ReportRoutes },
   { path: "/favorite", route: FavoriteRoutes },
   { path: "/offer", route: OfferRoutes },
+  { path: "/gift", route: GiftRoutes },
 ];
 
 apiRoutes.forEach((route) => router.use(route.path, route.route));

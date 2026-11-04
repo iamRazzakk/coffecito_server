@@ -44,15 +44,10 @@ const offerSchema = new Schema<IOffer, OfferModel>(
       enum: OFFER_TYPES,
       required: true,
     },
-    shopId: {
+    productId: {
       type: Schema.Types.ObjectId,
-      ref: "Shop",
-      required: true,
-    },
-    productIds: {
-      type: [Schema.Types.ObjectId],
       ref: "Product",
-      default: [],
+      required: false,
     },
     isActive: {
       type: Boolean,

@@ -11,10 +11,7 @@ import { Offer } from "../offer/offer.model";
 import { CouponCode } from "../coupon_code/coupon_code.model";
 import { awardPurchasePoints } from "./purchase.points";
 import { finalizeCheckoutPrice } from "./purchase.pricing";
-import {
-  buildStripeLineItems,
-  quoteOffers,
-} from "../offer/offer.calculator";
+import { buildStripeLineItems, quoteOffers } from "../offer/offer.calculator";
 import stripe from "../../../config/stripe";
 import config from "../../../config";
 import QueryBuilder from "../../builder/queryBuilder";
@@ -260,8 +257,41 @@ const getAllPurchaseHistoryFromDB = async (query: Record<string, any>) => {
   return { meta, data };
 };
 
+// order history
+const getUserOrderHistoryFromDB = async (
+  user: JwtPayload,
+  query: Record<string, any>,
+) => {
+  const qb = new QueryBuilder(
+    Purchase.find({ userId: new Types.ObjectId(user.id) }),
+    query,
+  )
+    .filter()
+    .sort()
+    .populate(["userId"], {
+      userId: "name phone",
+    })
+    .paginate();
+  const [meta, data] = await Promise.all([
+    qb.getPaginationInfo(),
+    qb.modelQuery.exec(),
+  ]);
+  return { meta, data };
+};
+
+
+// last order 
+const getUserLastOrderFromDB = async (user: JwtPayload) => {
+  const result = await Purchase.findOne({ userId: new Types.ObjectId(user.id) })
+    .sort({ createdAt: -1 })
+    .lean();
+  return result;
+};
+
 export const PurchaseServices = {
   createPurchaseDataIntoDB,
   getMyPurchasesHistoryFromDB,
   getAllPurchaseHistoryFromDB,
+  getUserOrderHistoryFromDB,
+  getUserLastOrderFromDB,
 };

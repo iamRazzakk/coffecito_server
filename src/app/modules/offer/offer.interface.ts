@@ -16,8 +16,7 @@ export type IOffer = {
   description: string;
   image: string;
   offerType: OfferType;
-  shopId: Types.ObjectId;
-  productIds: Types.ObjectId[];
+  productId?: Types.ObjectId;
   isActive: boolean;
   buyQuantity?: number;
   getQuantity?: number;
