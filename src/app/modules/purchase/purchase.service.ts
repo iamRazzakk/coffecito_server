@@ -332,31 +332,24 @@ const getUserLastOrderFromDB = async (user: JwtPayload, shopId: string) => {
 
 const getOrderDetailsFromDB = async (id: string) => {
   const result = await Purchase.findById(id)
-    .populate([
-      {
-        path: "userId",
-        select: "name phone",
-      },
-      {
-        path: "items.productId",
-        select: "productName image",
-      },
-    ])
+    .populate(["userId", "items.productId"], {
+      userId: "name phone",
+    })
     .lean();
-  return result;
+
+  const productId = result?._id.toString().slice(0, 6);
+  return { ...result, productId };
 };
 
 const getSinglePurchaseDetailsFromDB = async (id: string) => {
   const result = await Purchase.findById(id)
-    .populate(["userId", "items.productId"], {  
-       userId: "name phone",
-       select: "productName image",
+    .populate(["userId", "items.productId"], {
+      userId: "name phone",
+      select: "productName image",
     })
     .lean();
   return result;
-}
-
-
+};
 
 export const PurchaseServices = {
   createPurchaseDataIntoDB,
@@ -365,5 +358,4 @@ export const PurchaseServices = {
   getUserOrderHistoryFromDB,
   getUserLastOrderFromDB,
   getOrderDetailsFromDB,
-  getSinglePurchaseDetailsFromDB,
 };
