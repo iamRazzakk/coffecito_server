@@ -16,6 +16,7 @@ const confirmPaidCheckout = async (session: Stripe.Checkout.Session) => {
   if (!purchaseId) return;
 
   let confirmed = false;
+  let purchaserId: Types.ObjectId | undefined;
   const dbSession = await mongoose.startSession();
   try {
     dbSession.startTransaction();
@@ -25,6 +26,7 @@ const confirmPaidCheckout = async (session: Stripe.Checkout.Session) => {
     }).session(dbSession);
 
     if (purchase) {
+      purchaserId = purchase.userId;
       const cartItems = await Cart.find({
         _id: { $in: purchase.cartId },
         userId: purchase.userId,
@@ -69,19 +71,33 @@ const confirmPaidCheckout = async (session: Stripe.Checkout.Session) => {
     await dbSession.endSession();
   }
 
-  if (!confirmed) return;
+  if (!confirmed || !purchaserId) return;
 
   try {
     const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).lean();
-    if (!admin) return;
+    const notifications = [
+      sendNotifications({
+        title: "Purchase Confirmed",
+        message: "Your purchase has been confirmed successfully",
+        receiver: purchaserId,
+        sender: admin?._id,
+        isRead: false,
+      }),
+    ];
 
-    await sendNotifications({
-      title: "Purchase Confirmed",
-      message: "Your purchase has been confirmed",
-      receiver: admin._id,
-      sender: new Types.ObjectId(session.metadata?.userId),
-      isRead: false,
-    });
+    if (admin) {
+      notifications.push(
+        sendNotifications({
+          title: "New Purchase Confirmed",
+          message: `Purchase ${purchaseId} has been paid and confirmed`,
+          receiver: admin._id,
+          sender: purchaserId,
+          isRead: false,
+        }),
+      );
+    }
+
+    await Promise.all(notifications);
   } catch (error) {
     logger.error(
       `Purchase ${purchaseId} confirmed, but notification failed: ${error}`,

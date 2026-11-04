@@ -7,3 +7,4 @@ SECURITY.md
 *questions.md
 *.log
 config.bat
+.env

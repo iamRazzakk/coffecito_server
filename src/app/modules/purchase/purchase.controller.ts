@@ -89,6 +89,21 @@ const getOrderDetails = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getSinglePurchaseDetails = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await PurchaseServices.getSinglePurchaseDetailsFromDB(
+      req.params.id,
+    );
+  
+    sendResponse(res, {
+      success: true,
+      message: "Purchase details fetched successfully",
+      statusCode: StatusCodes.OK,
+      data: result,
+    });
+  },
+);
+
 export const PurchaseController = {
   createPurchase,
   getMyPurchasesHistory,
@@ -96,4 +111,5 @@ export const PurchaseController = {
   getUserOrderHistory,
   getUserLastOrder,
   getOrderDetails,
+  getSinglePurchaseDetails,
 };

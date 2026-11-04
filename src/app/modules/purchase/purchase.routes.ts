@@ -33,5 +33,9 @@ router
 
 router
   .route("/:id")
-  .get(auth(USER_ROLES.SUPER_ADMIN), PurchaseController.getOrderDetails);
+  .get(
+    auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
+    PurchaseController.getOrderDetails,
+  );
+  
 export const PurchaseRoutes = router;
