@@ -11,11 +11,6 @@ const userSchema = new Schema<IUser, UserModal>(
       type: String,
       required: true,
     },
-    email: {
-      type: String,
-      trim: true,
-      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    },
     phone: {
       type: String,
       required: true,
@@ -81,8 +76,6 @@ const userSchema = new Schema<IUser, UserModal>(
     toObject: { virtuals: true },
   },
 );
-// for fast lookup
-userSchema.index({ phone: 1 });
 // if filtering by role often
 userSchema.index({ role: 1 });
 // location index

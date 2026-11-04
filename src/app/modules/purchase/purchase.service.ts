@@ -246,12 +246,12 @@ const getMyPurchasesHistoryFromDB = async (
     filter.delivaryStatus = delivaryStatus;
   }
 
-  const purchases = new QueryBuilder(
-    Purchase.find(filter),
-    query,
-  )
+  const purchases = new QueryBuilder(Purchase.find(filter), query)
     .filter()
     .sort()
+    .populate(["items.productId"], {
+      "items.productId": "productName image",
+    })
     .paginate();
   const [meta, data] = await Promise.all([
     purchases.getPaginationInfo(),

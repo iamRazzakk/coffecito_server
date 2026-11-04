@@ -13,7 +13,7 @@ export type OfferLine = {
   shopId: string;
 };
 
-export type StoredOffer = IOffer & { _id: Types.ObjectId };
+export type StoredOffer = IOffer & { _id: Types.ObjectId, shopId:Types.ObjectId };
 
 export type PricedOfferLine = OfferLine & {
   payable: number;
@@ -49,9 +49,9 @@ const moneyOff = (amount: number, kind: DiscountKind, value: number) => {
 
 const idText = (id: Types.ObjectId | string) => id.toString();
 
-const qualifyingLines = (offer: IOffer, lines: OfferLine[]) =>
+const qualifyingLines = (offer: any, lines: OfferLine[]) =>
   lines.filter((line) => {
-    if (line.shopId !== idText(offer.shopId)) return false;
+    if (line.shopId !== idText(offer?.shopId)) return false;
     if (!offer.productId) return true;
     return idText(offer.productId) === line.productId;
   });
@@ -142,10 +142,10 @@ const buyXGetPercentDiscount = (offer: IOffer, lines: OfferLine[]) => {
   }, 0);
 };
 
-const comboDiscount = (offer: IOffer, lines: OfferLine[]) => {
+const comboDiscount = (offer: any, lines: OfferLine[]) => {
   const required = (offer.comboProductIds ?? []).map(idText);
   if (required.length < 2 || offer.comboPrice == null) return 0;
-  const shopLines = lines.filter((line) => line.shopId === idText(offer.shopId));
+  const shopLines = lines.filter((line) => line.shopId === idText(offer?.shopId));
   const quantityByProduct = new Map<string, number>();
   shopLines.forEach((line) => {
     quantityByProduct.set(
@@ -154,12 +154,12 @@ const comboDiscount = (offer: IOffer, lines: OfferLine[]) => {
     );
   });
   const sets = Math.min(
-    ...required.map((productId) => quantityByProduct.get(productId) ?? 0),
+    ...required.map((productId: any) => quantityByProduct.get(productId) ?? 0),
   );
   if (sets < 1) return 0;
 
   let consumedTotal = 0;
-  required.forEach((productId) => {
+  required.forEach((productId: any) => {
     let remaining = sets;
     const productLines = shopLines
       .filter((line) => line.productId === productId)
@@ -175,7 +175,7 @@ const comboDiscount = (offer: IOffer, lines: OfferLine[]) => {
   return Math.max(0, roundMoney(consumedTotal - sets * offer.comboPrice));
 };
 
-const giftDiscount = (offer: IOffer, lines: OfferLine[], scoped: OfferLine[]) => {
+const giftDiscount = (offer: any, lines: OfferLine[], scoped: OfferLine[]) => {
   if (!offer.giftProductId) return { discount: 0, keys: [] as string[] };
   const scopedQuantity = scoped.reduce((sum, line) => sum + line.quantity, 0);
   const scopedSubtotal = sumLines(scoped);

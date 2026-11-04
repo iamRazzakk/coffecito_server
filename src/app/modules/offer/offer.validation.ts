@@ -53,6 +53,8 @@ const offerBody = z.object({
     const next = emptyToUndefined(value);
     return next;
   }, z.string().optional()),
+  shopId: z.string({ required_error: "Shop id is required" }),
+  productIds: jsonArray(z.array(z.string())),
   isActive: booleanField,
   buyQuantity: intField,
   getQuantity: intField,

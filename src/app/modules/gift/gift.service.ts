@@ -104,7 +104,7 @@ const claimGiftToDB = async (giftId: string, userId: string) => {
       );
     }
 
-    const earnedPoints = gift.earnPoints;
+    const earnedPoints = (gift as any).earnPoints;
     if (earnedPoints > 0) {
       await User.updateOne(
         { _id: userId },
