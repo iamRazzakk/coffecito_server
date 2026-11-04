@@ -15,7 +15,7 @@ const createShop = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllShops = catchAsync(async (req: Request, res: Response) => {
-  const shops = await ShopServices.getAllShopsFromDB(req.query);
+  const shops = await ShopServices.getAllShopsFromDB(req.query, req.user);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -26,7 +26,7 @@ const getAllShops = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getShopById = catchAsync(async (req: Request, res: Response) => {
-  const shop = await ShopServices.getShopByIdFromDB(req.params.id);
+  const shop = await ShopServices.getShopByIdFromDB(req.params.id, req.user);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,

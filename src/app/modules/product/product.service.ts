@@ -9,6 +9,7 @@ import { Purchase } from "../purchase/purchase.model";
 import stripe from "../../../config/stripe";
 import config from "../../../config";
 import { prepareDirectPurchase } from "./product.helper";
+import { Favorite } from "../favorite/favorite.model";
 
 const createProductToDB = async (payload: IProduct, user: JwtPayload) => {
   payload.shopId = new Types.ObjectId(user.id);
@@ -61,9 +62,17 @@ const getAllProductsFilterByStatusFromDB = async (
   };
 };
 
-const getProductByIdFromDB = async (id: string) => {
+const getProductByIdFromDB = async (id: string, user: JwtPayload) => {
   const product = await Product.findById(id).populate("categoryId").lean();
-  return product;
+  if (!product) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Product not found");
+  }
+
+  const isFavorite = Boolean(
+    await Favorite.exists({ userId: user.id, productId: product._id }),
+  );
+
+  return { ...product, isFavorite };
 };
 
 const updateProductByIdToDB = async (

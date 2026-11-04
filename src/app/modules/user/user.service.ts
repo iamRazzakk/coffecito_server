@@ -20,7 +20,6 @@ const createUserToDB = async (payload: Partial<IUser>) => {
     value: Number(otp),
     expiration: 3 * 60,
   });
-  // TODO:: return otp for testing
   return { otp };
 };
 

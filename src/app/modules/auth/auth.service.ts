@@ -24,7 +24,7 @@ import { USER_ROLES } from "../../../enums/user";
 const loginUserFromDB = async (payload: ILoginData) => {
   const { phone } = payload;
 
-  const user = await User.findOne({ phone });
+  const user = await User.findOne({ phone }).lean();
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }

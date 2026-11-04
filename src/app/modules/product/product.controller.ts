@@ -42,7 +42,10 @@ const getAllProductsFilterByStatus = catchAsync(
 );
 
 const getProductById = catchAsync(async (req: Request, res: Response) => {
-  const product = await ProductServices.getProductByIdFromDB(req.params.id);
+  const product = await ProductServices.getProductByIdFromDB(
+    req.params.id,
+    req.user,
+  );
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,

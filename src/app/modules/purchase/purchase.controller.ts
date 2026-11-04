@@ -80,7 +80,10 @@ const getUserLastOrder = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getOrderDetails = catchAsync(async (req: Request, res: Response) => {
-  const result = await PurchaseServices.getOrderDetailsFromDB(req.params.id);
+  const result = await PurchaseServices.getOrderDetailsFromDB(
+    req.params.id,
+    req.user,
+  );
   sendResponse(res, {
     success: true,
     message: "Order details fetched successfully",

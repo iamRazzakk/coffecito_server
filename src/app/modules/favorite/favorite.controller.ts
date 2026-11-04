@@ -19,7 +19,10 @@ const toggleFavorite = catchAsync(async (req: Request, res: Response) => {
       result.action === "added"
         ? "Favorite added successfully"
         : "Favorite removed successfully",
-    data: result.favorite,
+    data: {
+      ...result.favorite.toObject(),
+      isFavorite: result.action === "added",
+    },
   });
 });
 

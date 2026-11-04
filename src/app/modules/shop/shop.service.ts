@@ -8,6 +8,8 @@ import { IUser } from "../user/user.interface";
 import { USER_ROLES } from "../../../enums/user";
 import mongoose, { Types } from "mongoose";
 import { Product } from "../product/product.model";
+import { JwtPayload } from "jsonwebtoken";
+import { Favorite } from "../favorite/favorite.model";
 // create shop in to db
 const createShopToDB = async (payload: IShop) => {
   const isExist = await User.findOne({ phone: payload.phone });
@@ -44,7 +46,10 @@ const createShopToDB = async (payload: IShop) => {
   }
 };
 
-const getAllShopsFromDB = async (query: Record<string, any>) => {
+const getAllShopsFromDB = async (
+  query: Record<string, any>,
+  user: JwtPayload,
+) => {
   const shops = new QueryBuilder(Shop.find(), query)
     .search(["name", "contactInfo.location.coordinates"])
     .filter()
@@ -52,19 +57,37 @@ const getAllShopsFromDB = async (query: Record<string, any>) => {
     .paginate();
 
   const [data, meta] = await Promise.all([
-    shops.modelQuery.exec(),
+    shops.modelQuery.lean().exec(),
     shops.getPaginationInfo(),
   ]);
 
-  return { data, meta };
+  const favoriteShopIds = await Favorite.find({
+    userId: user.id,
+    type: "shop",
+    shopId: { $in: data.map((shop: any) => shop._id) },
+  }).distinct("shopId");
+  const favoriteSet = new Set(favoriteShopIds.map(String));
+
+  return {
+    data: data.map((shop: any) => ({
+      ...shop,
+      isFavorite: favoriteSet.has(String(shop._id)),
+    })),
+    meta,
+  };
 };
 
-const getShopByIdFromDB = async (id: string) => {
-  const shop = await Shop.findById(id);
+const getShopByIdFromDB = async (id: string, user: JwtPayload) => {
+  const shop = await Shop.findById(id).lean();
   if (!shop) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Shop not found");
   }
-  return shop;
+
+  const isFavorite = Boolean(
+    await Favorite.exists({ userId: user.id, shopId: shop._id }),
+  );
+
+  return { ...shop, isFavorite };
 };
 
 const updateShopByIdToDB = async (id: string, payload: Partial<IShop>) => {

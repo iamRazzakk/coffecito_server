@@ -102,16 +102,25 @@ const getMyFavoritesFromDB = async (
   const cached = await redisService.get(cacheKey);
 
   if (cached) {
-    return JSON.parse(cached) as IFavorite[];
+    return (JSON.parse(cached) as IFavorite[]).map((favorite) => ({
+      ...favorite,
+      isFavorite: true,
+    }));
   }
 
-  const favorites = await Favorite.find(type ? { userId, type } : { userId })
+  const favoriteDocuments = await Favorite.find(
+    type ? { userId, type } : { userId },
+  )
     .populate("shopId", "name image phone status")
     .populate(
       "productId",
       "productName image discountPrice originalPrice shopId",
     )
     .lean();
+  const favorites = favoriteDocuments.map((favorite) => ({
+    ...favorite,
+    isFavorite: true,
+  }));
 
   await redisService.post({
     key: cacheKey,

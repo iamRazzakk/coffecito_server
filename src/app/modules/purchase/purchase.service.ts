@@ -16,6 +16,7 @@ import { buildStripeLineItems, quoteOffers } from "../offer/offer.calculator";
 import stripe from "../../../config/stripe";
 import config from "../../../config";
 import QueryBuilder from "../../builder/queryBuilder";
+import { Favorite } from "../favorite/favorite.model";
 
 const createPurchaseDataIntoDB = async (
   payload: Pick<IPurchase, "cartId" | "couponCodeId"> & { offerId?: string },
@@ -330,14 +331,46 @@ const getUserLastOrderFromDB = async (user: JwtPayload, shopId: string) => {
   return result;
 };
 
-const getOrderDetailsFromDB = async (id: string) => {
+const getOrderDetailsFromDB = async (id: string, user: JwtPayload) => {
   const result = await Purchase.findById(id)
-    .populate(["userId", "items.productId"], {
-      userId: "name phone",
-    })
+    .populate([
+      {
+        path: "userId",
+        select: "name phone",
+      },
+      {
+        path: "items.productId",
+        select: "productName image",
+      },
+    ])
     .lean();
 
-  const productId = result?._id.toString().slice(0, 6);
+  if (!result) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Purchase not found");
+  }
+
+  const items = result.items ?? [];
+  const populatedProductIds = items
+    .map((item: any) => item.productId?._id)
+    .filter(Boolean);
+  const favoriteProductIds = await Favorite.find({
+    userId: user.id,
+    type: "product",
+    productId: { $in: populatedProductIds },
+  }).distinct("productId");
+  const favoriteSet = new Set(favoriteProductIds.map(String));
+
+  result.items = items.map((item: any) => ({
+    ...item,
+    productId: item.productId
+      ? {
+          ...item.productId,
+          isFavorite: favoriteSet.has(String(item.productId._id)),
+        }
+      : item.productId,
+  })) as any;
+
+  const productId = result._id.toString().slice(0, 6);
   return { ...result, productId };
 };
 
