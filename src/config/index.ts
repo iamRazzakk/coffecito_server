@@ -22,6 +22,7 @@ export default {
     webhookSecret: process.env.stripe_webhook_secret,
     paymentSuccess: process.env.payment_success_url,
     paymentSuccessUrl: process.env.payment_success_url,
+    paymentCancelUrl: process.env.payment_cancel_url,
   },
   email: {
     from: process.env.EMAIL_FROM,

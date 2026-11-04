@@ -54,6 +54,13 @@ router
   );
 
 router
+  .route("/:id/purchase")
+  .post(
+    auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+    ProductController.purchaseProductDirectly,
+  );
+
+router
   .route("/:id")
   .get(
     auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),

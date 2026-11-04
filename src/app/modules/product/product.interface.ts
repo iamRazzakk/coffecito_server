@@ -26,4 +26,10 @@ export interface IProduct {
   point?: number;
 }
 
+export type IDirectPurchasePayload = {
+  quantity?: number;
+  size?: "S" | "M" | "L";
+  extras?: string[];
+};
+
 export type ProductModel = Model<IProduct>;

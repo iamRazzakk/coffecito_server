@@ -24,7 +24,7 @@ export type ProductPriceBreakdown = {
   taxPercentage: number;
 };
 
-const roundMoney = (amount: number) => Math.round(amount * 100) / 100;
+export const roundMoney = (amount: number) => Math.round(amount * 100) / 100;
 
 const extraKey = (names?: string[]) =>
   [...new Set((names ?? []).map((name) => name.trim()).filter(Boolean))]

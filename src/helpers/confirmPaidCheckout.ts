@@ -6,8 +6,10 @@ import { Purchase } from "../app/modules/purchase/purchase.model";
 import { awardPurchasePoints } from "../app/modules/purchase/purchase.points";
 import { User } from "../app/modules/user/user.model";
 import { sendNotifications } from "./notificationsHelper";
+import { logger } from "../shared/logger";
 
 const confirmPaidCheckout = async (session: Stripe.Checkout.Session) => {
+  console.log("Session", session);
   if (session.payment_status !== "paid") return;
 
   const purchaseId = session.metadata?.purchaseId;
@@ -38,10 +40,11 @@ const confirmPaidCheckout = async (session: Stripe.Checkout.Session) => {
           }));
           await purchase.save({ session: dbSession });
         }
-        await Cart.deleteMany({
+        const res = await Cart.deleteMany({
           _id: { $in: cartItems.map((item) => item._id) },
           userId: purchase.userId,
         }).session(dbSession);
+        console.log("Data delete", res);
       }
 
       await awardPurchasePoints(
@@ -68,14 +71,22 @@ const confirmPaidCheckout = async (session: Stripe.Checkout.Session) => {
 
   if (!confirmed) return;
 
-  const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN });
-  await sendNotifications({
-    title: "Purchase Confirmed",
-    message: "Your purchase has been confirmed",
-    receiver: new Types.ObjectId(admin?._id),
-    sender: new Types.ObjectId(session.metadata?.userId),
-    isRead: false,
-  });
+  try {
+    const admin = await User.findOne({ role: USER_ROLES.SUPER_ADMIN }).lean();
+    if (!admin) return;
+
+    await sendNotifications({
+      title: "Purchase Confirmed",
+      message: "Your purchase has been confirmed",
+      receiver: admin._id,
+      sender: new Types.ObjectId(session.metadata?.userId),
+      isRead: false,
+    });
+  } catch (error) {
+    logger.error(
+      `Purchase ${purchaseId} confirmed, but notification failed: ${error}`,
+    );
+  }
 };
 
 export default confirmPaidCheckout;

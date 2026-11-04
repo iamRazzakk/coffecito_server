@@ -19,8 +19,9 @@ export type IPurchase = {
   amount: number;
   offerId?: Types.ObjectId;
   couponCodeId?: Types.ObjectId;
-  status: "pending" | "confirmed" | "delivered" | "cancelled";
+  status: "pending" | "confirmed" | "delivered" | "cancelled" | "failed";
   items?: IPurchaseItem[];
+  delivaryStatus: "pending" | "confirmed" | "delivered" | "cancelled";
 };
 
 export type PurchaseModel = Model<IPurchase>;

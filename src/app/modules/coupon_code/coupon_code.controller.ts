@@ -41,7 +41,10 @@ const getAllCouponCodes = catchAsync(
 
 const updateCouponCode = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const couponCode = await CouponCodeService.updateCouponCode(req.params.id, req.body);
+    const couponCode = await CouponCodeService.updateCouponCode(
+      req.params.id,
+      req.body,
+    );
     sendResponse(res, {
       statusCode: StatusCodes.OK,
       success: true,
@@ -63,10 +66,26 @@ const deleteCouponCode = catchAsync(
   },
 );
 
+const getCouponCode = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const code = req.body.code;
+    const couponCode = await CouponCodeService.getCouponCodeFromDB(
+      Number(code),
+    );
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: "Coupon code fetched successfully",
+      data: couponCode,
+    });
+  },
+);
+
 export const CouponCodeController = {
   createCouponCode,
   getCouponCodeById,
   getAllCouponCodes,
   updateCouponCode,
   deleteCouponCode,
+  getCouponCode,
 };

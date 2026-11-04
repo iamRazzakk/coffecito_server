@@ -11,6 +11,11 @@ const userSchema = new Schema<IUser, UserModal>(
       type: String,
       required: true,
     },
+    email: {
+      type: String,
+      trim: true,
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    },
     phone: {
       type: String,
       required: true,

@@ -89,6 +89,11 @@ const purchaseSchema = new Schema<IPurchase, PurchaseModel>(
     },
     status: {
       type: String,
+      enum: ["pending", "confirmed", "delivered", "cancelled", "failed"],
+      default: "pending",
+    },
+    delivaryStatus: {
+      type: String,
       enum: ["pending", "confirmed", "delivered", "cancelled"],
       default: "pending",
     },
@@ -98,6 +103,7 @@ const purchaseSchema = new Schema<IPurchase, PurchaseModel>(
   },
 );
 purchaseSchema.index({ status: 1, cartId: 1 });
+purchaseSchema.index({ userId: 1, delivaryStatus: 1, createdAt: -1 });
 export const Purchase = model<IPurchase, PurchaseModel>(
   "Purchase",
   purchaseSchema,

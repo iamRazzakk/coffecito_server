@@ -8,13 +8,23 @@ const createCouponCode = async (payload: ICouponCode) => {
 };
 
 const getAllCouponCodes = async () => {
-  const couponCodes = await CouponCode.find();
+  const couponCodes = await CouponCode.find().lean();
   return couponCodes;
 };
 
 const getCouponCodeById = async (id: string) => {
-  const couponCode = await CouponCode.findById(id);
+  const couponCode = await CouponCode.findById(id).lean();
   return couponCode;
+};
+
+// coupon code exist or not
+const getCouponCodeFromDB = async (code: number) => {
+  const result = await CouponCode.findOne({ code, isActive: true }).lean();
+  if (!result) {
+    throw new ApiError(404, "Coupon code not found");
+  }
+
+  return result;
 };
 
 const updateCouponCode = async (id: string, payload: ICouponCode) => {
@@ -41,4 +51,5 @@ export const CouponCodeService = {
   getCouponCodeById,
   updateCouponCode,
   deleteCouponCode,
+  getCouponCodeFromDB,
 };

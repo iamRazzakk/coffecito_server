@@ -36,10 +36,22 @@ const handleStripeWebhook = async (req: Request, res: Response) => {
   try {
     switch (eventType) {
       case "checkout.session.completed":
-        await confirmPaidCheckout(
-          event.data.object as Stripe.Checkout.Session,
-        );
+      case "checkout.session.async_payment_succeeded":
+        await confirmPaidCheckout(event.data.object as Stripe.Checkout.Session);
         break;
+
+      case "checkout.session.async_payment_failed":
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.metadata?.purchaseId) {
+          const { Purchase } = await import("../app/modules/purchase/purchase.model");
+          await Purchase.updateOne(
+            { _id: session.metadata.purchaseId, status: "pending" },
+            { status: "failed" },
+          );
+        }
+        break;
+      }
 
       default:
         logger.warn(colors.bgGreen.bold(`Unhandled event type: ${eventType}`));

@@ -1,5 +1,6 @@
 import { JwtPayload } from "jsonwebtoken";
 import { Cart } from "../cart/cart.model";
+import { User } from "../user/user.model";
 import { IPurchase } from "./purchase.interface";
 import { Purchase } from "./purchase.model";
 import ApiError from "../../../errors/ApiErrors";
@@ -181,16 +182,15 @@ const createPurchaseDataIntoDB = async (
       couponCodeId: payload.couponCodeId ?? null,
     };
   }
-
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     success_url: config.stripe.paymentSuccessUrl,
-    cancel_url: config.stripe.paymentSuccessUrl,
+    cancel_url: config.stripe.paymentCancelUrl,
     line_items: stripeLines.map((line) => ({
       quantity: line.quantity,
       price_data: {
         currency: "usd",
-        unit_amount: line.unitAmount,
+        unit_amount: Number(line.unitAmount),
         product_data: {
           name: line.name,
         },
@@ -227,9 +227,27 @@ const createPurchaseDataIntoDB = async (
 const getMyPurchasesHistoryFromDB = async (
   user: JwtPayload,
   query: Record<string, any>,
+  delivaryStatus?: string,
 ) => {
+  const allowedStatuses = ["pending", "confirmed", "delivered", "cancelled"];
+  if (delivaryStatus && !allowedStatuses.includes(delivaryStatus)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid delivary status");
+  }
+
+  const filter: Record<string, unknown> = {
+    userId: new Types.ObjectId(user.id),
+  };
+  if (delivaryStatus === "pending") {
+    filter.$or = [
+      { delivaryStatus: "pending" },
+      { delivaryStatus: { $exists: false } },
+    ];
+  } else if (delivaryStatus) {
+    filter.delivaryStatus = delivaryStatus;
+  }
+
   const purchases = new QueryBuilder(
-    Purchase.find({ userId: new Types.ObjectId(user.id) }),
+    Purchase.find(filter),
     query,
   )
     .filter()
@@ -246,8 +264,9 @@ const getAllPurchaseHistoryFromDB = async (query: Record<string, any>) => {
   const purchases = new QueryBuilder(Purchase.find(), query)
     .filter()
     .sort()
-    .populate(["userId"], {
+    .populate(["userId", "items.productId"], {
       userId: "name phone",
+      "items.productId": "image",
     })
     .paginate();
   const [meta, data] = await Promise.all([
@@ -268,22 +287,54 @@ const getUserOrderHistoryFromDB = async (
   )
     .filter()
     .sort()
-    .populate(["userId"], {
+    .populate(["userId", "items.productId"], {
       userId: "name phone",
+      "items.productId": "image productName",
     })
     .paginate();
   const [meta, data] = await Promise.all([
     qb.getPaginationInfo(),
-    qb.modelQuery.exec(),
+    qb.modelQuery.lean().exec(),
   ]);
   return { meta, data };
 };
 
+// last order
+const getUserLastOrderFromDB = async (user: JwtPayload, shopId: string) => {
+  if (!Types.ObjectId.isValid(shopId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid shop id");
+  }
 
-// last order 
-const getUserLastOrderFromDB = async (user: JwtPayload) => {
-  const result = await Purchase.findOne({ userId: new Types.ObjectId(user.id) })
+  const productIds = await Product.find({
+    shopId: new Types.ObjectId(shopId),
+  }).distinct("_id");
+
+  if (!productIds.length) return null;
+
+  const result = await Purchase.findOne({
+    userId: new Types.ObjectId(user.id),
+    "items.productId": { $in: productIds },
+  })
+    .populate({
+      path: "items.productId",
+      select: "productName image",
+      match: { shopId: new Types.ObjectId(shopId) },
+    })
     .sort({ createdAt: -1 })
+    .lean();
+
+  if (result?.items) {
+    result.items = result.items.filter((item) => item.productId);
+  }
+
+  return result;
+};
+
+const getOrderDetailsFromDB = async (id: string) => {
+  const result = await Purchase.findById(id)
+    .populate(["userId", "items.productId"], {
+      userId: "name phone",
+    })
     .lean();
   return result;
 };
@@ -294,4 +345,5 @@ export const PurchaseServices = {
   getAllPurchaseHistoryFromDB,
   getUserOrderHistoryFromDB,
   getUserLastOrderFromDB,
+  getOrderDetailsFromDB,
 };

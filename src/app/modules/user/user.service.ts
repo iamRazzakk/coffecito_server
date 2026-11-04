@@ -47,6 +47,7 @@ const updateProfileToDB = async (
 
   const updateDoc = await User.findOneAndUpdate({ _id: id }, payload, {
     new: true,
+    runValidators: true,
   });
   return updateDoc;
 };

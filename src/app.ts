@@ -11,13 +11,14 @@ import helmet from "helmet";
 import { apiLimiter } from "./services/rate-limiter";
 import router from "./app/routes";
 import handleStripeWebhook from "./helpers/handleStripeWebhook";
+import catchAsync from "./shared/catchAsync";
 const app = express();
 
 //! stripe
 app.post(
   "/api/stripe/webhook",
   express.raw({ type: "application/json" }),
-  handleStripeWebhook,
+  catchAsync(handleStripeWebhook),
 );
 
 // morgan

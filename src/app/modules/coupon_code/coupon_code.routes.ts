@@ -14,6 +14,13 @@ router
   );
 
 router
+  .route("/verify")
+  .post(
+    auth(USER_ROLES.USER, USER_ROLES.SHOP_OWNER, USER_ROLES.SUPER_ADMIN),
+    CouponCodeController.getCouponCode,
+  );
+
+router
   .route("/:id")
   .get(
     auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),

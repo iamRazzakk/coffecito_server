@@ -25,9 +25,13 @@ router
     PurchaseController.getUserOrderHistory,
   );
 router
-  .route("/last")
+  .route("/last/:id")
   .get(
     auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
     PurchaseController.getUserLastOrder,
   );
+
+router
+  .route("/:id")
+  .get(auth(USER_ROLES.SUPER_ADMIN), PurchaseController.getOrderDetails);
 export const PurchaseRoutes = router;

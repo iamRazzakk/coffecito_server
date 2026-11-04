@@ -21,10 +21,11 @@ const createPurchase = catchAsync(async (req: Request, res: Response) => {
 
 const getMyPurchasesHistory = catchAsync(
   async (req: Request, res: Response) => {
-    const query = req.query;
+    const { delivaryStatus, ...query } = req.query;
     const result = await PurchaseServices.getMyPurchasesHistoryFromDB(
       req.user,
       query,
+      typeof delivaryStatus === "string" ? delivaryStatus : undefined,
     );
     sendResponse(res, {
       success: true,
@@ -66,7 +67,10 @@ const getUserOrderHistory = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getUserLastOrder = catchAsync(async (req: Request, res: Response) => {
-  const result = await PurchaseServices.getUserLastOrderFromDB(req.user);
+  const result = await PurchaseServices.getUserLastOrderFromDB(
+    req.user,
+    req.params.id,
+  );
   sendResponse(res, {
     success: true,
     message: "Last order fetched successfully",
@@ -75,7 +79,15 @@ const getUserLastOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
+const getOrderDetails = catchAsync(async (req: Request, res: Response) => {
+  const result = await PurchaseServices.getOrderDetailsFromDB(req.params.id);
+  sendResponse(res, {
+    success: true,
+    message: "Order details fetched successfully",
+    statusCode: StatusCodes.OK,
+    data: result,
+  });
+});
 
 export const PurchaseController = {
   createPurchase,
@@ -83,4 +95,5 @@ export const PurchaseController = {
   getAllPurchaseHistory,
   getUserOrderHistory,
   getUserLastOrder,
+  getOrderDetails,
 };

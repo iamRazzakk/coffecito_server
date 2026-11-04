@@ -74,6 +74,20 @@ const deleteProductById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const purchaseProductDirectly = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProductServices.purchaseProductDirectly(
+    req.params.id,
+    req.body,
+    req.user,
+  );
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.CREATED,
+    message: "Payment session created successfully",
+    data: result,
+  });
+});
+
 export const ProductController = {
   createProduct,
   getAllProducts,
@@ -81,4 +95,5 @@ export const ProductController = {
   getProductById,
   updateProductById,
   deleteProductById,
+  purchaseProductDirectly,
 };

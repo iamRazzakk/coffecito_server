@@ -1,10 +1,14 @@
 import { StatusCodes } from "http-status-codes";
 import QueryBuilder from "../../builder/queryBuilder";
-import { IProduct } from "./product.interface";
+import { IDirectPurchasePayload, IProduct } from "./product.interface";
 import { Product } from "./product.model";
 import ApiError from "../../../errors/ApiErrors";
 import { JwtPayload } from "jsonwebtoken";
 import { Types } from "mongoose";
+import { Purchase } from "../purchase/purchase.model";
+import stripe from "../../../config/stripe";
+import config from "../../../config";
+import { prepareDirectPurchase } from "./product.helper";
 
 const createProductToDB = async (payload: IProduct, user: JwtPayload) => {
   payload.shopId = new Types.ObjectId(user.id);
@@ -48,7 +52,7 @@ const getAllProductsFilterByStatusFromDB = async (
     .populate(["categoryId"], {});
 
   const [data, meta] = await Promise.all([
-    qb.modelQuery.exec(),
+    qb.modelQuery.lean().exec(),
     qb.getPaginationInfo(),
   ]);
   return {
@@ -58,7 +62,7 @@ const getAllProductsFilterByStatusFromDB = async (
 };
 
 const getProductByIdFromDB = async (id: string) => {
-  const product = await Product.findById(id).populate("categoryId");
+  const product = await Product.findById(id).populate("categoryId").lean();
   return product;
 };
 
@@ -79,6 +83,74 @@ const deleteProductByIdFromDB = async (id: string) => {
   return product;
 };
 
+const purchaseProductDirectly = async (
+  productId: string,
+  payload: IDirectPurchasePayload,
+  user: JwtPayload,
+) => {
+  if (!config.stripe.paymentSuccessUrl || !config.stripe.paymentCancelUrl) {
+    throw new ApiError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      "Payment redirect urls are missing",
+    );
+  }
+
+  const product = await Product.findOne({
+    _id: productId,
+    status: true,
+  }).lean();
+  if (!product) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Product not found");
+  }
+
+  const checkout = prepareDirectPurchase(product, payload);
+
+  const purchase = await Purchase.create({
+    cartId: [],
+    userId: new Types.ObjectId(user.id),
+    subtotal: checkout.subtotal,
+    offerDiscountAmount: 0,
+    couponDiscountAmount: 0,
+    discountAmount: 0,
+    taxableAmount: checkout.subtotal,
+    taxAmount: checkout.taxAmount,
+    amount: checkout.amount,
+    items: [
+      {
+        productId: product._id,
+        quantity: checkout.quantity,
+        size: checkout.size,
+        unitPrice: checkout.unitPrice,
+      },
+    ],
+    status: "pending",
+  });
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      success_url: config?.stripe?.paymentSuccessUrl,
+      cancel_url: config?.stripe?.paymentCancelUrl,
+      line_items: [checkout.stripeLineItem],
+      metadata: {
+        purchaseId: purchase?._id?.toString(),
+        userId: user?.id,
+        checkoutType: "direct_product",
+      },
+    });
+    if (!session.url) throw new Error("Stripe did not return a checkout url");
+
+    return {
+      url: session.url,
+      purchaseId: purchase._id,
+      amount: checkout.amount,
+    };
+  } catch (error) {
+    await Purchase.updateOne({ _id: purchase._id }, { status: "failed" });
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Failed to create payment url");
+  }
+};
+
 export const ProductServices = {
   createProductToDB,
   getAllProductsFromDB,
@@ -86,4 +158,5 @@ export const ProductServices = {
   getProductByIdFromDB,
   updateProductByIdToDB,
   deleteProductByIdFromDB,
+  purchaseProductDirectly,
 };
